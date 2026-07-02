@@ -8,16 +8,18 @@
 import SwiftUI
 import SwiftData
 
-@main
-struct FreelanceFinanceApp: App {
-    
+@main struct FreelanceFinanceApp: App {
+    let container = SwiftDataService.makeContainer()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(AppContainer.shared)
+                .onOpenURL { url in
+                    AppContainer.shared.handle(url: url)
+                }
         }
-        .modelContainer(for: [
-            Transaction.self,
-            ChatSession.self
-        ])
+        .modelContainer(container)
     }
 }
+

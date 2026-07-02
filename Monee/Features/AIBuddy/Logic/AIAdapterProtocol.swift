@@ -15,4 +15,9 @@ protocol AIAdapterProtocol {
     ///   - userPrompt: The question or message submitted by the user.
     /// - Returns: The AI's response text.
     func generateAdvice(systemContext: String, userPrompt: String) async throws -> String
+    
+    /// Optional pre-flight check, run once when the chat screen appears. Return `nil` if
+        /// the adapter is ready to generate; return a short user-facing reason if not.
+        /// Adapters with no such concept (e.g. a network-based one) can just return nil.
+    func availabilityWarning() -> String?
 }
