@@ -2,11 +2,6 @@
 //  ContentView.swift
 //  FreelanceFinance
 //
-//  Updated 03/07/26 — removed the pending-receipt deep-link route. Receipt scanning now
-//  only enters through the "+" menu's "Scan Receipt" option, which opens
-//  ReceiptConfirmationView's in-app PhotosPicker — that pipeline was already fully built,
-//  it just never had a reachable button.
-//
 //  ⚠️ UI PLACEHOLDER: Dashboard layout, "+" menu — functional-only. UI team, restyle freely.
 //
 
@@ -34,6 +29,7 @@ private struct DashboardView: View {
 
     @State private var showingQuickAdd = false
     @State private var showingScanReceipt = false
+    @State private var editingTransaction: Transaction?
 
     private var totalSpent: Double {
         transactions.filter { !$0.isIncome }.reduce(0) { $0 + $1.amount }
@@ -109,6 +105,9 @@ private struct DashboardView: View {
             .sheet(isPresented: $showingScanReceipt) {
                 ReceiptConfirmationView()
             }
+            .sheet(item: $editingTransaction) { transaction in
+                QuickEntryFormView(editing: transaction)
+            }
         }
         .onChange(of: appContainer.pendingRoute) { _, newRoute in
             handleRoute(newRoute)
@@ -129,6 +128,8 @@ private struct DashboardView: View {
         switch route {
         case .quickEntry:
             showingQuickAdd = true
+        case .editTransaction(let id):
+            editingTransaction = transactions.first(where: { $0.id == id })
         }
         appContainer.pendingRoute = nil
     }

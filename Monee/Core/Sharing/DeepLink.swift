@@ -4,21 +4,23 @@
 //
 //  Core/Sharing/DeepLink.swift
 //
-//  Updated 03/07/26 — removed .pendingReceipt. The Share Extension/notification-based
-//  receipt handoff is retired (unreliable on real-device testing for a 2-day sprint).
-//  Receipt scanning is now entirely in-app via ReceiptConfirmationView's PhotosPicker.
-//  Only remaining route is the Widget's Quick Entry tap.
+//  .quickEntry: Widget's Quick Entry tap. .editTransaction: tapping the "Logged" notification
+//  after an Action Button / Share Extension capture — routes to editing that already-saved
+//  Transaction (see NotificationDelegate + ReceiptCaptureService).
 //
 
 import Foundation
 
 enum DeepLink: Equatable {
     case quickEntry
+    case editTransaction(id: UUID)
 
     var url: URL {
         switch self {
         case .quickEntry:
             return URL(string: "moneeapp://quickEntry")!
+        case .editTransaction(let id):
+            return URL(string: "moneeapp://editTransaction?id=\(id.uuidString)")!
         }
     }
 
@@ -26,6 +28,13 @@ enum DeepLink: Equatable {
         switch url.host {
         case "quickEntry":
             self = .quickEntry
+        case "editTransaction":
+            guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+                  let idString = components.queryItems?.first(where: { $0.name == "id" })?.value,
+                  let id = UUID(uuidString: idString) else {
+                return nil
+            }
+            self = .editTransaction(id: id)
         default:
             return nil
         }

@@ -8,9 +8,14 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main struct FreelanceFinanceApp: App {
     let container = SwiftDataService.makeContainer()
+
+    init() {
+        UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
+    }
 
     var body: some Scene {
         WindowGroup {
