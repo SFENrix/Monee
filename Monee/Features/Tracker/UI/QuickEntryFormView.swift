@@ -2,19 +2,8 @@
 //  QuickEntryFormView.swift
 //  Monee
 //
-//  Created by Rio Ferdinand on 02/07/26.
-//
-
-
-//
-//  QuickEntryFormView.swift
-//  FreelanceFinance
-//
-//  Created by Rio Ferdinand on 02/07/26.
-//
-//  Focused input form for manual transaction entry. Presented as a sheet from the
-//  Dashboard today; built so it can equally be pushed full-screen from a deep link
-//  (WidgetExtension/Intents/QuickEntryIntent.swift) later without changes.
+//  Focused input form for manual transaction entry — and, via `editing`, for fixing up an
+//  already-saved OCR capture (reached from the notification tap-to-edit route).
 //
 //  ⚠️ UI PLACEHOLDER: plain Form/Picker styling, functional only. UI team — swap freely,
 //  nothing downstream depends on how this looks, only on QuickEntryViewModel's public API.
@@ -29,6 +18,9 @@ struct QuickEntryFormView: View {
     @StateObject private var viewModel = QuickEntryViewModel()
 
     var onSaved: (() -> Void)?
+
+    /// Non-nil when opened to fix up an already-saved Transaction (notification tap-to-edit).
+    var editing: Transaction?
 
     var body: some View {
         NavigationStack {
@@ -68,7 +60,7 @@ struct QuickEntryFormView: View {
                 }
             }
             .dismissKeyboardOnTap()
-            .navigationTitle(viewModel.isIncome ? "Add Income" : "Add Transaction")
+            .navigationTitle(editing != nil ? "Edit Transaction" : (viewModel.isIncome ? "Add Income" : "Add Transaction"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -82,6 +74,11 @@ struct QuickEntryFormView: View {
                         }
                     }
                     .disabled(!viewModel.canSave)
+                }
+            }
+            .task {
+                if let editing {
+                    viewModel.load(from: editing)
                 }
             }
         }

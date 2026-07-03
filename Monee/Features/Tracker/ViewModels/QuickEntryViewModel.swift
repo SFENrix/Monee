@@ -1,14 +1,11 @@
 //
 //  QuickEntryViewModel.swift
-//  FreelanceFinance
+//  Monee
 //
-//  Created by Rio Ferdinand on 02/07/26.
-//
-//  Owns form state + validation + persistence for manual transaction entry.
-//  Deliberately has no knowledge of how it's presented (sheet, full push, deep link from
-//  QuickEntryIntent later) — the view handles presentation, this just handles data.
-//  Updated 02/07/26 — added `source`/`rawKeyword` so ReceiptConfirmationView can reuse this
-//  exact save path for OCR-sourced transactions instead of duplicating validation logic.
+//  Owns form state + validation + persistence for manual transaction entry, AND for editing
+//  an already-existing Transaction (used by the notification tap-to-edit route in
+//  NotificationDelegate -> ContentView). Deliberately has no knowledge of how it's presented
+//  (sheet, deep link) — the view handles presentation, this just handles data.
 //
 
 import Foundation
@@ -33,8 +30,28 @@ final class QuickEntryViewModel: ObservableObject {
     @Published var source: TransactionSource = .manual
     @Published var rawKeyword: String?
 
+    /// Non-nil while editing an existing Transaction — `save()` updates it in place instead
+    /// of inserting a new one.
+    private var editingTransaction: Transaction?
+
     var canSave: Bool {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (amount ?? 0) > 0
+    }
+
+    /// Loads an existing Transaction's fields for editing.
+    ///
+    /// `isIncome` MUST be set before `category` — `isIncome`'s didSet resets `category` to
+    /// `.unassigned`/`.income` as a side effect, so `category` has to be the last write to
+    /// actually stick (same gotcha already documented in ReceiptConfirmationView).
+    func load(from transaction: Transaction) {
+        editingTransaction = transaction
+        title = transaction.title
+        amount = transaction.amount
+        date = transaction.date
+        source = transaction.source
+        rawKeyword = transaction.rawKeyword
+        isIncome = transaction.isIncome
+        category = transaction.category
     }
 
     @discardableResult
@@ -50,15 +67,24 @@ final class QuickEntryViewModel: ObservableObject {
             return false
         }
 
-        let transaction = Transaction(
-            title: trimmedTitle,
-            amount: amount,
-            date: date,
-            category: category,
-            source: source,
-            rawKeyword: rawKeyword
-        )
-        modelContext.insert(transaction)
+        if let editingTransaction {
+            editingTransaction.title = trimmedTitle
+            editingTransaction.amount = amount
+            editingTransaction.date = date
+            editingTransaction.category = category
+            editingTransaction.source = source
+            editingTransaction.rawKeyword = rawKeyword
+        } else {
+            let transaction = Transaction(
+                title: trimmedTitle,
+                amount: amount,
+                date: date,
+                category: category,
+                source: source,
+                rawKeyword: rawKeyword
+            )
+            modelContext.insert(transaction)
+        }
 
         do {
             try modelContext.save()
@@ -79,5 +105,6 @@ final class QuickEntryViewModel: ObservableObject {
         source = .manual
         rawKeyword = nil
         isIncome = false
+        editingTransaction = nil
     }
 }
