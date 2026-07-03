@@ -128,11 +128,13 @@ git commit -m "fix: correct App Group identifier mismatch, Share Extension text 
 **Files:**
 - Create: `Monee/Core/Notifications/NotificationService.swift`
 - Create: `Monee/Core/Capture/ReceiptCaptureService.swift`
+- Modify: `Monee/Core/Utilities/RegexParser.swift` (add stub fields, Step 2b)
 
 **Interfaces:**
-- Consumes: `RegexParser.parse(_:) -> ParsedReceiptData` (existing, until Task 7 — until then
-  `ParsedReceiptData` still lacks `suggestedTitle`/`isIncome`; this task uses placeholder
-  values for those two fields that Task 7 will wire up for real — see Step 2 note).
+- Consumes: `RegexParser.parse(_:) -> ParsedReceiptData` (existing).
+- Produces (via Step 2b): `ParsedReceiptData.suggestedTitle: String` and
+  `ParsedReceiptData.isIncome: Bool`, both stub-valued until Task 7 replaces them with real
+  logic.
 - Consumes: `SwiftDataService.makeContainer() -> ModelContainer` (existing).
 - Consumes: `Transaction.init(title:amount:date:category:source:rawKeyword:)` (existing).
 - Consumes: `Double.idrFormatted` (existing, `Monee/Core/Utilities/CurrencyFormat.swift`).
@@ -245,12 +247,51 @@ enum ReceiptCaptureService {
 ```
 
 Note: this references `parsed.suggestedTitle` and `parsed.isIncome`, which do not exist on
-`ParsedReceiptData` until Task 7. **This means the project will not compile between Task 2
-and Task 7.** That's expected and acceptable for this plan's ordering (crucial-fixes-first per
-the spec) — Task 7 is the last task specifically so it can be the one that finally makes
-everything compile together. If you need a compiling checkpoint sooner, temporarily stub
-`suggestedTitle`/`isIncome` on `ParsedReceiptData` now and let Task 7 replace the stub — see
-Task 7 Step 2 for the real implementation either way.
+`ParsedReceiptData` yet. Step 2b below adds temporary stub values for both so the project
+can keep compiling task-by-task; Task 7 replaces the stubs with the real tuned logic.
+
+- [ ] **Step 2b: Add temporary stub fields to `ParsedReceiptData`**
+
+In `Monee/Core/Utilities/RegexParser.swift`, add two fields to `ParsedReceiptData` with
+placeholder values — real logic for both lands in Task 7 (lowest priority, last, per the
+spec's explicit crucial-fixes-first ordering). This keeps the project buildable at every
+checkpoint from here on instead of only at the very end.
+
+Change:
+
+```swift
+struct ParsedReceiptData {
+    var amount: Double?
+    var date: Date?
+    var keyword: String?
+    var category: TransactionCategory
+    var rawText: String
+
+    var isComplete: Bool {
+        amount != nil && date != nil
+    }
+}
+```
+
+to:
+
+```swift
+struct ParsedReceiptData {
+    var amount: Double?
+    var date: Date?
+    var keyword: String?
+    var category: TransactionCategory
+    /// Stub for now — Task 7 replaces this with a real "ke <Name>" extraction pattern.
+    var suggestedTitle: String = "Receipt"
+    /// Stub for now — Task 7 replaces this with real income/expense direction detection.
+    var isIncome: Bool = false
+    var rawText: String
+
+    var isComplete: Bool {
+        amount != nil && date != nil
+    }
+}
+```
 
 - [ ] **Step 3: Set target membership**
 
@@ -912,11 +953,19 @@ struct QuickEntryFormView: View {
 }
 ```
 
-- [ ] **Step 3: Manual verification**
+- [ ] **Step 3: Verify by inspection (full build isn't possible yet)**
 
-Build and run the Monee app target in the simulator. From the Dashboard, tap the "+" menu →
-"Manual Entry" — confirm the form still opens titled "Add Transaction" and saves a new
-transaction as before (no regression to the existing manual-entry path).
+`Monee/AppTargets/ScanReceiptTextIntent.swift` and
+`Monee/AppTargets/ShareExtension/ShareViewController.swift` still reference the old
+`PendingReceiptStore`/`NotificationService` API until Task 6 rewrites them, so the Monee
+scheme cannot build end-to-end yet — that's expected at this point in the plan. Instead,
+re-read the diff for this task and confirm by inspection: (1) `QuickEntryViewModel.save()`
+mutates `editingTransaction` in place when it's non-nil, and only inserts a new `Transaction`
+when it's nil; (2) `load(from:)` sets `isIncome` before `category`, matching the ordering
+comment; (3) `QuickEntryFormView`'s `.task` only calls `viewModel.load(from:)` when `editing`
+is non-nil, so the plain "Add Transaction" path (`editing == nil`) is untouched. The actual
+build-and-run regression check for the manual-entry path happens as part of Task 6 Step 4,
+once the whole project compiles again.
 
 - [ ] **Step 4: Commit**
 
@@ -934,9 +983,9 @@ git commit -m "feat: add edit mode to QuickEntryViewModel/QuickEntryFormView"
 
 **Interfaces:**
 - Consumes: `ScannerViewModel` (existing, unchanged), `QuickEntryViewModel` (Task 4).
-- Consumes (after Task 7 lands): `ParsedReceiptData.suggestedTitle: String`,
-  `ParsedReceiptData.isIncome: Bool`. Until Task 7, this file will not compile — same
-  ordering trade-off as Tasks 2–4; expected.
+- Consumes: `ParsedReceiptData.suggestedTitle: String`, `ParsedReceiptData.isIncome: Bool`
+  (stub-valued since Task 2's Step 2b, real values from Task 7 — either way this file
+  compiles once this task's changes are applied).
 
 - [ ] **Step 1: Remove the staged-entry (`pendingEntryID`) path entirely**
 
@@ -1406,16 +1455,27 @@ In Xcode, select `Monee/Core/Utilities/RegexParser.swift`,
 
 - [ ] **Step 4: Manual verification (requires a physical device or Shortcuts-capable simulator)**
 
+This is the first point in the plan where the whole project should build — every prior task
+either left a piece of the old broken API in place (fixed here) or was working against
+`ParsedReceiptData`'s Task 2 stub values (`suggestedTitle`/`isIncome`), which is enough to
+compile even before Task 7's real tuning lands.
+
 1. Build and run the Monee app once (to install it and its extensions) on a device/simulator.
-2. In the Shortcuts app, build the Action Button shortcut described in
+   Confirm the build succeeds.
+2. From the Dashboard, tap the "+" menu → "Manual Entry" — confirm the form still opens
+   titled "Add Transaction" and saves a new transaction as before (regression check for
+   Task 4's edit-mode changes, deferred here since this is the first point a full build is
+   possible).
+3. In the Shortcuts app, build the Action Button shortcut described in
    `ScanReceiptTextIntent.swift`'s header comment, pointed at a screenshot of one of the two
    sample receipts (`IMG_2076.heic` / `IMG_1861.heic` in the repo root, or copies with the
    sensitive fields already blocked out).
-3. Run the shortcut. Confirm: a "Logged" notification appears; opening the Monee app's
-   Tracker shows a new transaction with a non-zero amount.
-4. Tap the notification. Confirm: the app opens (or comes to the foreground) directly into
+4. Run the shortcut. Confirm: a "Logged" notification appears; opening the Monee app's
+   Tracker shows a new transaction with a non-zero amount (title will just read "Receipt"
+   until Task 7 lands — that's the expected stub value).
+5. Tap the notification. Confirm: the app opens (or comes to the foreground) directly into
    an "Edit Transaction" sheet pre-filled with that transaction's data.
-5. Share the same screenshot via the system share sheet, choosing "Monee" (the Share
+6. Share the same screenshot via the system share sheet, choosing "Monee" (the Share
    Extension). Confirm the same "Logged" notification and edit flow work identically.
 
 - [ ] **Step 5: Commit**
@@ -1435,10 +1495,10 @@ git commit -m "feat: wire Action Button and Share Extension to ReceiptCaptureSer
 - Create: `scripts/verify_regex_parser.swift` (standalone check, no Xcode test target needed)
 
 **Interfaces:**
-- Produces: `ParsedReceiptData.suggestedTitle: String`, `ParsedReceiptData.isIncome: Bool`
-  (finally satisfying what `ReceiptConfirmationView` and `ReceiptCaptureService` have been
-  referencing since Tasks 2 and 5 — the project should compile cleanly for the first time
-  after this task).
+- Produces: real (non-stub) logic for `ParsedReceiptData.suggestedTitle: String` and
+  `ParsedReceiptData.isIncome: Bool` (Task 2 added these as stub-valued fields; this task
+  replaces the stubs with real parsing logic — no compile-state change from this task, the
+  project has been buildable since Task 6).
 - Produces: `TransactionCategory.transfer` case.
 
 - [ ] **Step 1: Add the `.transfer` category**
@@ -1787,11 +1847,10 @@ them.
 
 - [ ] **Step 5: Full project build**
 
-Open `Monee.xcodeproj` in Xcode and build the `Monee` scheme (<kbd>Cmd+B</kbd>). This is the
-first point in the plan where the whole project should build cleanly — every task before
-this one intentionally left `suggestedTitle`/`isIncome` unresolved. Fix any remaining
-compile errors before proceeding (there should be none if every prior task's code was
-applied as written).
+Open `Monee.xcodeproj` in Xcode and build the `Monee` scheme (<kbd>Cmd+B</kbd>). The project
+has been buildable since Task 6 (this task only swaps stub values for real logic, no new
+types), so this build should already succeed cleanly. Fix any remaining compile errors before
+proceeding (there should be none if every prior task's code was applied as written).
 
 - [ ] **Step 6: Commit**
 
