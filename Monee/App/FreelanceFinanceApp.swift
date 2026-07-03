@@ -18,7 +18,7 @@ import UIKit
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootTabView()
                 .environment(AppContainer.shared)
                 .onOpenURL { url in
                     AppContainer.shared.handle(url: url)
