@@ -32,7 +32,11 @@ enum SwiftDataService {
 
     /// Production container — persists to disk. Used by the real app.
     static func makeContainer() -> ModelContainer {
-        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        let config = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            groupContainer: .identifier(AppGroup.identifier)
+        )
         do {
             return try ModelContainer(for: schema, configurations: [config])
         } catch {

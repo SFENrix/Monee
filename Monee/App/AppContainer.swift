@@ -2,8 +2,9 @@
 //  AppContainer.swift
 //  Monee
 //
-//  Updated 03/07/26 — removed checkForPendingReceipt(). pendingRoute now only ever
-//  carries .quickEntry.
+//  Updated 03/07/26 — removed checkForPendingReceipt(). pendingRoute now carries
+//  either .quickEntry (Widget's Quick Entry tap) or .editTransaction (tapping the
+//  capture-success notification).
 //
 
 import Foundation
