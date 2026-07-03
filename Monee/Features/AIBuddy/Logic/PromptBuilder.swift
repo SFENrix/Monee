@@ -43,7 +43,8 @@ enum PromptBuilder {
 
         // Cap at 50 so we don't blow past the on-device model's context window.
         return transactions.prefix(50).map { txn in
-            "- \(txn.date.formatted(date: .abbreviated, time: .omitted)): \(txn.title) (\(txn.category.rawValue), $\(String(format: "%.2f", txn.amount)))"
+            "- \(txn.date.formatted(date: .abbreviated, time: .omitted)): \(txn.title) (\(txn.category.rawValue), \(txn.amount.idrFormatted))"
+            // was: ...($\(String(format: "%.2f", txn.amount)))
         }.joined(separator: "\n")
     }
 

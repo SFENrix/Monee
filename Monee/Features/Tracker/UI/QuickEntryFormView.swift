@@ -43,7 +43,7 @@ struct QuickEntryFormView: View {
 
                 Section("Details") {
                     TextField("What was it for?", text: $viewModel.title)
-                    TextField("Amount", value: $viewModel.amount, format: .currency(code: "USD"))
+                    TextField("Amount", value: $viewModel.amount, format: .idr)
                         .keyboardType(.decimalPad)
                     DatePicker("Date", selection: $viewModel.date, displayedComponents: .date)
                 }

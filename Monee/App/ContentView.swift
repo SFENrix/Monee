@@ -2,25 +2,16 @@
 //  ContentView.swift
 //  FreelanceFinance
 //
-//  Created by Rio Ferdinand on 27/06/26.
-//  Rewritten 02/07/26 — replaced the default Xcode SwiftData template (`Item`) with the
-//  real Dashboard, wired to the actual Transaction model.
-//  Updated 02/07/26 — AI Buddy tab now points at the real AIChatView instead of a placeholder.
-//  Updated 02/07/26 — Add button now presents the real QuickEntryFormView.
-//  Updated 02/07/26 — Dashboard reacts to AppContainer.pendingRoute (Widget/Share Extension
-//  deep links) via handleRoute(_:).
-//  Updated 02/07/26 — Total Spent/Income split now that Transaction supports income.
-//  Updated 02/07/26 — pendingReceipt route now actually loads the App Group image and
-//  presents ReceiptConfirmationView, instead of just printing.
-//  Updated 02/07/26 — added ReserveCard showing CashReserveCalculator output on Dashboard.
+//  Updated 03/07/26 — removed the pending-receipt deep-link route. Receipt scanning now
+//  only enters through the "+" menu's "Scan Receipt" option, which opens
+//  ReceiptConfirmationView's in-app PhotosPicker — that pipeline was already fully built,
+//  it just never had a reachable button.
 //
-//  ⚠️ UI PLACEHOLDER: Dashboard layout (list, summary cards, row styling) is functional-only.
-//  UI team — restyle freely; nothing else in the app depends on how this looks.
+//  ⚠️ UI PLACEHOLDER: Dashboard layout, "+" menu — functional-only. UI team, restyle freely.
 //
 
 import SwiftUI
 import SwiftData
-import UIKit
 
 struct ContentView: View {
     var body: some View {
@@ -42,8 +33,7 @@ private struct DashboardView: View {
     @Query(sort: \Transaction.date, order: .reverse) private var transactions: [Transaction]
 
     @State private var showingQuickAdd = false
-    @State private var showingReceiptScan = false
-    @State private var pendingReceiptImage: UIImage?
+    @State private var showingScanReceipt = false
 
     private var totalSpent: Double {
         transactions.filter { !$0.isIncome }.reduce(0) { $0 + $1.amount }
@@ -95,8 +85,19 @@ private struct DashboardView: View {
             .navigationTitle("Monee")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showingQuickAdd = true
+                    // ⚠️ UI PLACEHOLDER — a Menu is the quickest way to expose two entry
+                    // points without crowding the toolbar. Restyle freely.
+                    Menu {
+                        Button {
+                            showingQuickAdd = true
+                        } label: {
+                            Label("Manual Entry", systemImage: "square.and.pencil")
+                        }
+                        Button {
+                            showingScanReceipt = true
+                        } label: {
+                            Label("Scan Receipt", systemImage: "doc.text.viewfinder")
+                        }
                     } label: {
                         Label("Add Transaction", systemImage: "plus.circle.fill")
                     }
@@ -105,8 +106,8 @@ private struct DashboardView: View {
             .sheet(isPresented: $showingQuickAdd) {
                 QuickEntryFormView()
             }
-            .sheet(isPresented: $showingReceiptScan) {
-                ReceiptConfirmationView(pendingImage: pendingReceiptImage)
+            .sheet(isPresented: $showingScanReceipt) {
+                ReceiptConfirmationView()
             }
         }
         .onChange(of: appContainer.pendingRoute) { _, newRoute in
@@ -128,28 +129,8 @@ private struct DashboardView: View {
         switch route {
         case .quickEntry:
             showingQuickAdd = true
-        case .pendingReceipt:
-            loadPendingReceipt()
         }
         appContainer.pendingRoute = nil
-    }
-
-    /// Reads the image ShareViewController dropped in the App Group container, hands it
-    /// to ReceiptConfirmationView, then clears the pending flag/file immediately — once
-    /// the image is in memory there's no reason to re-trigger this on next launch, even
-    /// if the user cancels the scan instead of saving.
-    private func loadPendingReceipt() {
-        guard AppGroup.defaults.bool(forKey: AppGroupKey.hasPendingReceipt),
-              let data = try? Data(contentsOf: AppGroup.pendingReceiptImageURL),
-              let image = UIImage(data: data) else {
-            return
-        }
-
-        AppGroup.defaults.set(false, forKey: AppGroupKey.hasPendingReceipt)
-        try? FileManager.default.removeItem(at: AppGroup.pendingReceiptImageURL)
-
-        pendingReceiptImage = image
-        showingReceiptScan = true
     }
 }
 
@@ -165,12 +146,12 @@ private struct SummaryCard: View {
             Text("Total Spent")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            Text(totalSpent, format: .currency(code: "USD"))
+            Text(totalSpent, format: .idr)
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
             HStack(spacing: 4) {
                 Image(systemName: "arrow.up.circle.fill")
                     .foregroundStyle(.green)
-                Text("Income logged: \(totalIncome, format: .currency(code: "USD"))")
+                Text("Income logged: \(totalIncome, format: .idr)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -218,7 +199,7 @@ private struct ReserveCard: View {
                         .foregroundStyle(.orange)
                 }
             }
-            Text(summary.currentReserve, format: .currency(code: "USD"))
+            Text(summary.currentReserve, format: .idr)
                 .font(.system(.title2, design: .rounded, weight: .bold))
                 .foregroundStyle(summary.currentReserve < 0 ? .red : .primary)
             Text(runwayText)
@@ -254,7 +235,7 @@ private struct TransactionRow: View {
 
             Spacer()
 
-            Text((transaction.isIncome ? "+" : "-") + transaction.amount.formatted(.currency(code: "USD")))
+            Text((transaction.isIncome ? "+" : "-") + transaction.amount.formatted(.idr))
                 .font(.body.monospacedDigit())
                 .foregroundStyle(transaction.isIncome ? .green : .primary)
         }

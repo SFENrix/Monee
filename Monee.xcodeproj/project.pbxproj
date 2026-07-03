@@ -64,7 +64,6 @@
 		28970AFC2FF64A5000C4F18A /* Exceptions for "Monee" folder in "Monee" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				App/PendingReceipt.swift,
 				AppTargets/ShareExtension/ShareViewController.swift,
 				AppTargets/WidgetExtension/Intents/WidgetExtensionBundle.swift,
 				AppTargets/WidgetExtension/UI/HomeWidgetView.swift,
@@ -83,8 +82,11 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				AppTargets/ShareExtension/ShareViewController.swift,
+				Core/Database/Models/Transaction.swift,
 				Core/Sharing/AppGroup.swift,
 				Core/Sharing/DeepLink.swift,
+				Core/Utilities/RegexParser.swift,
+				Features/ReceiptScanner/Logic/VisionOCRServiceError.swift,
 			);
 			target = 28970AE92FF6489D00C4F18A /* ShareExtension */;
 		};
@@ -101,16 +103,6 @@
 			target = 28970B002FF64C5D00C4F18A /* WidgetExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		28B3A8202FF6B03700A9405F /* Exceptions for "Monee" folder in "Copy Bundle Resources" phase from "Monee" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = 28C41F332FEFECBE0096CC62 /* Resources */;
-			membershipExceptions = (
-				App/PendingReceipt.swift,
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		28970AEB2FF6489D00C4F18A /* ShareExtension */ = {
@@ -133,7 +125,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				28970AFC2FF64A5000C4F18A /* Exceptions for "Monee" folder in "Monee" target */,
-				28B3A8202FF6B03700A9405F /* Exceptions for "Monee" folder in "Copy Bundle Resources" phase from "Monee" target */,
 				28970B1D2FF6575B00C4F18A /* Exceptions for "Monee" folder in "ShareExtension" target */,
 				28970B1F2FF6576100C4F18A /* Exceptions for "Monee" folder in "WidgetExtension" target */,
 			);
