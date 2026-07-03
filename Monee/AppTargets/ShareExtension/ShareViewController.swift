@@ -2,25 +2,18 @@
 //  ShareViewController.swift
 //  Monee
 //
-//  Created by Rio Ferdinand on 02/07/26.
-//
-//  Updated 03/07/26 — now handles shared PLAIN TEXT in addition to shared images, and
-//  runs OCR + RegexParser directly in the extension process instead of handing an image
-//  off to the main app to process. Vision framework works fine inside extensions, no
-//  special entitlement needed. This retires the old single-slot App Group handoff
-//  (loadPendingReceipt in ContentView) — both paths now stage into PendingReceiptStore
-//  and fire the same rich notification the Action Button flow uses.
+//  Handles shared plain text and shared images identically: extract text (directly for
+//  text shares, via VisionOCRService for image shares), then hand off to
+//  ReceiptCaptureService — the exact same save-or-skip rule the Action Button flow uses.
+//  A failed/empty OCR result on an image share behaves the same as "no amount found":
+//  nothing is saved, and the photo itself is not retained anywhere after this runs.
 //
 //  ⚠️ Requires this file's Info.plist NSExtensionActivationRule to accept BOTH
-//  public.plain-text and public.image (previously image-only). Simple dictionary form:
-//    NSExtensionActivationRule = {
-//      NSExtensionActivationSupportsText = YES
-//      NSExtensionActivationSupportsImageWithMaxCount = 1
-//    }
+//  public.plain-text and public.image (see ShareExtension/Info.plist).
 //
 //  ⚠️ Target membership: this file needs RegexParser.swift, Transaction.swift,
-//  AppGroup.swift, PendingReceiptText.swift, NotificationCategory.swift, and
-//  VisionOCRServiceError.swift (which contains VisionOCRService) all added to the
+//  AppGroup.swift, VisionOCRServiceError.swift, CurrencyFormat.swift,
+//  NotificationService.swift, and ReceiptCaptureService.swift all added to the
 //  ShareExtension target in Xcode's File Inspector.
 //
 //  ⚠️ UI PLACEHOLDER — bare loading state, not a designed screen.
@@ -70,7 +63,7 @@ class ShareViewController: UIViewController {
             return
         }
 
-        stageAndNotify(rawText: text, imageData: nil)
+        capture(rawText: text)
         finish()
     }
 
@@ -94,26 +87,14 @@ class ShareViewController: UIViewController {
             return
         }
 
-        let jpeg = image.jpegData(compressionQuality: 0.85)
-        // Reuse the same VisionOCRService the in-app manual scan uses — one OCR
-        // implementation, not two. If recognition fails outright, still stage an
-        // (empty-text) entry with the image attached so the capture isn't silently
-        // lost; the "Edit" path lets the user fill everything in by hand.
         let text = (try? await VisionOCRService.recognizeText(from: image)) ?? ""
-        stageAndNotify(rawText: text, imageData: jpeg)
+        capture(rawText: text)
         finish()
     }
 
-    private func stageAndNotify(rawText: String, imageData: Data?) {
-        let parsed = RegexParser.parse(rawText)
-        let entry = PendingReceiptStore.add(
-            rawText: rawText,
-            parsed: parsed,
-            source: .shareExtension,
-            imageData: imageData
-        )
+    private func capture(rawText: String) {
         NotificationService.configure() // defensive — extension launch may skip app init
-        NotificationService.scheduleReceiptNotification(for: entry)
+        _ = ReceiptCaptureService.capture(rawText: rawText)
     }
 
     private func finish() {

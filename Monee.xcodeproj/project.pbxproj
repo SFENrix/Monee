@@ -87,6 +87,7 @@
 				Core/Notifications/NotificationService.swift,
 				Core/Sharing/AppGroup.swift,
 				Core/Sharing/DeepLink.swift,
+				Core/Utilities/CurrencyFormat.swift,
 				Core/Utilities/RegexParser.swift,
 				Features/ReceiptScanner/Logic/VisionOCRServiceError.swift,
 			);
