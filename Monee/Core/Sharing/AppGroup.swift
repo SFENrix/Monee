@@ -21,7 +21,7 @@
 import Foundation
 
 enum AppGroup {
-    static let identifier = "group.com.rioferdinand.freelancefinance"
+    static let identifier = "group.com.rioferdinand.monee"
 
     static var defaults: UserDefaults {
         guard let suite = UserDefaults(suiteName: identifier) else {
