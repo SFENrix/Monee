@@ -21,6 +21,7 @@ enum TransactionCategory: String, Codable, CaseIterable {
     case travel = "Travel & Transport"
     case meals = "Meals & Entertainment"
     case office = "Office Supplies"
+    case transfer = "Bank Transfer"
     case unassigned = "Unassigned"
 
     var iconName: String {
@@ -32,6 +33,7 @@ enum TransactionCategory: String, Codable, CaseIterable {
         case .travel: return "airplane"
         case .meals: return "fork.knife"
         case .office: return "printer.fill"
+        case .transfer: return "arrow.left.arrow.right.circle.fill"
         case .unassigned: return "questionmark.circle.fill"
         }
     }
@@ -45,6 +47,7 @@ enum TransactionCategory: String, Codable, CaseIterable {
         case .travel: return .teal
         case .meals: return .orange
         case .office: return .brown
+        case .transfer: return .blue
         case .unassigned: return .secondary
         }
     }
