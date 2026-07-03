@@ -82,7 +82,9 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				AppTargets/ShareExtension/ShareViewController.swift,
+				Core/Capture/ReceiptCaptureService.swift,
 				Core/Database/Models/Transaction.swift,
+				Core/Notifications/NotificationService.swift,
 				Core/Sharing/AppGroup.swift,
 				Core/Sharing/DeepLink.swift,
 				Core/Utilities/RegexParser.swift,

@@ -19,6 +19,10 @@ struct ParsedReceiptData {
     var date: Date?
     var keyword: String?
     var category: TransactionCategory
+    /// Stub for now — Task 7 replaces this with a real "ke <Name>" extraction pattern.
+    var suggestedTitle: String = "Receipt"
+    /// Stub for now — Task 7 replaces this with real income/expense direction detection.
+    var isIncome: Bool = false
     var rawText: String
 
     var isComplete: Bool {
