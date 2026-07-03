@@ -22,7 +22,7 @@
 import Foundation
 
 enum AppGroup {
-    static let identifier = "group.com.rioferdinand.freelancefinance"
+    static let identifier = "group.com.rioferdinand.monee"
 
     /// Small flags/values (deep-link routing, "pending receipt" flag).
     static var defaults: UserDefaults {

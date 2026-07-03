@@ -45,9 +45,11 @@ struct AIChatView: View {
                         }
                         .padding()
                     }
+                    .dismissKeyboardOnTap()   // ← add this
                     .onChange(of: viewModel.messages.count) { _, _ in
                         scrollToBottom(proxy)
                     }
+                    .scrollDismissesKeyboard(.interactively)
                 }
 
                 InputBar(text: $draft, isSending: viewModel.isThinking, onSend: send)

@@ -67,6 +67,7 @@ struct QuickEntryFormView: View {
                     }
                 }
             }
+            .dismissKeyboardOnTap()
             .navigationTitle(viewModel.isIncome ? "Add Income" : "Add Transaction")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
