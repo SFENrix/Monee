@@ -17,29 +17,32 @@ import SwiftUI
 import SwiftData
 
 struct TrackerView: View {
+    @Environment(AppContainer.self) private var appContainer
     @Query(sort: \Transaction.date, order: .reverse) private var transactions: [Transaction]
 
     @State private var visibleMonth: Date = .now
     @State private var showingMonthPicker = false
-    @State private var showingAddTransaction = false
+    @State private var showingQuickAdd = false
+    @State private var showingScanReceipt = false
+    @State private var editingTransaction: Transaction?
 
     var body: some View {
         ZStack(alignment: .top) {
             headerBackground
                 .frame(height: 220)
                 .ignoresSafeArea(edges: .top)
-
+            
             VStack(spacing: 0) {
                 header
                     .padding(.horizontal, 20)
                     .padding(.top, 54)
                     .padding(.bottom, 36)
-
+                
                 VStack(spacing: 0) {
                     monthControls
                         .padding(.horizontal, 16)
                         .padding(.top, 20)
-
+                    
                     transactionList
                 }
                 .background(
@@ -54,33 +57,58 @@ struct TrackerView: View {
                 .presentationDetents([.height(280)])
                 .presentationCornerRadius(28)
         }
-        .sheet(isPresented: $showingAddTransaction) {
+        .sheet(isPresented: $showingQuickAdd) {
             QuickEntryFormView(onSaved: {
                 // @Query already updates `transactions` automatically on save,
                 // so nothing extra is needed here unless you want e.g. to jump
                 // the list to the newly added transaction's month.
             })
         }
+        .sheet(isPresented: $showingScanReceipt) {
+            ReceiptConfirmationView()
+        }
+        .sheet(item: $editingTransaction) { transaction in
+            QuickEntryFormView(editing: transaction)
+        }
+        .onChange(of: appContainer.pendingRoute) { _, newRoute in
+            handleRoute(newRoute)
+        }
+        .onAppear {
+            handleRoute(appContainer.pendingRoute)
+        }
+    }
+
+    /// Routes a deep link (Widget's Quick Entry tap, or tapping the "Logged" notification
+    /// after an Action Button / Share Extension capture) to the right sheet.
+    private func handleRoute(_ route: DeepLink?) {
+        guard let route else { return }
+        switch route {
+        case .quickEntry:
+            showingQuickAdd = true
+        case .editTransaction(let id):
+            editingTransaction = transactions.first(where: { $0.id == id })
+        }
+        appContainer.pendingRoute = nil
     }
 
     // MARK: - Header
-
+    
     private var totalCollected: Double {
         transactions.reduce(0) { $0 + ($1.isIncome ? $1.amount : -$1.amount) }
     }
-
+    
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Money Collected")
                 .font(.system(size: 14))
                 .foregroundStyle(.secondary)
-
+            
             Text(formatCurrency(totalCollected, showSign: false))
                 .font(.system(size: 34, weight: .bold))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
-
+    
     private var headerBackground: some View {
         ZStack {
             LinearGradient(
@@ -94,9 +122,9 @@ struct TrackerView: View {
             DiagonalStripes()
         }
     }
-
+    
     // MARK: - Month controls
-
+    
     private var monthControls: some View {
         HStack {
             Button {
@@ -113,11 +141,19 @@ struct TrackerView: View {
                     )
             }
             .buttonStyle(.plain)
-
+            
             Spacer()
-
-            Button {
-                showingAddTransaction = true
+            Menu {
+                Button {
+                    showingQuickAdd = true
+                } label: {
+                    Label("Manual Entry", systemImage: "square.and.pencil")
+                }
+                Button {
+                    showingScanReceipt = true
+                } label: {
+                    Label("Scan Receipt", systemImage: "doc.viewfinder")
+                }
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 18, weight: .semibold))
@@ -126,17 +162,18 @@ struct TrackerView: View {
                     .background(Circle().fill(Color.accentColor))
             }
             .buttonStyle(.plain)
+            
         }
     }
-
+    
     // MARK: - Transaction list
-
+    
     private struct MonthGroup: Identifiable {
         let id = UUID()
         let monthDate: Date
         let transactions: [Transaction]
     }
-
+    
     private var groupedByMonth: [MonthGroup] {
         let calendar = Calendar.current
         let groups = Dictionary(grouping: transactions) { txn in
@@ -146,7 +183,7 @@ struct TrackerView: View {
             .map { MonthGroup(monthDate: $0.key, transactions: $0.value.sorted { $0.date > $1.date }) }
             .sorted { $0.monthDate > $1.monthDate }
     }
-
+    
     private var transactionList: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -169,34 +206,34 @@ struct TrackerView: View {
             }
         }
     }
-
+    
     /// Scrolls to the section matching the selected month/year. If there's no
     /// exact match (no transactions logged that month), scrolls to whichever
     /// section is closest instead of doing nothing.
     private func scrollToMonth(_ date: Date, proxy: ScrollViewProxy) {
         guard !groupedByMonth.isEmpty else { return }
-
+        
         let calendar = Calendar.current
         let targetComponents = calendar.dateComponents([.year, .month], from: date)
         guard let targetYear = targetComponents.year, let targetMonth = targetComponents.month else { return }
         let targetIndex = targetYear * 12 + targetMonth
-
+        
         func monthIndex(_ date: Date) -> Int {
             let comps = calendar.dateComponents([.year, .month], from: date)
             return (comps.year ?? 0) * 12 + (comps.month ?? 0)
         }
-
+        
         let closest = groupedByMonth.min { a, b in
             abs(monthIndex(a.monthDate) - targetIndex) < abs(monthIndex(b.monthDate) - targetIndex)
         }
-
+        
         if let closest {
             withAnimation {
                 proxy.scrollTo(closest.id, anchor: .top)
             }
         }
     }
-
+    
     private func monthSection(_ group: MonthGroup) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -206,7 +243,7 @@ struct TrackerView: View {
                 Text(group.monthDate.formatted(.dateTime.year()))
                     .font(.system(size: 20, weight: .bold))
             }
-
+            
             VStack(spacing: 0) {
                 ForEach(Array(group.transactions.enumerated()), id: \.element.id) { index, txn in
                     TransactionRow(transaction: txn)
@@ -223,7 +260,7 @@ struct TrackerView: View {
             )
         }
     }
-
+    
     private var emptyState: some View {
         VStack(spacing: 8) {
             Image(systemName: "tray")
@@ -264,11 +301,11 @@ private struct DiagonalStripes: View {
 
 private struct TransactionRow: View {
     let transaction: Transaction
-
+    
     private var day: String {
         transaction.date.formatted(.dateTime.day(.twoDigits))
     }
-
+    
     var body: some View {
         HStack(spacing: 12) {
             Text(day)
@@ -279,13 +316,13 @@ private struct TransactionRow: View {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .fill(Color.accentColor.opacity(0.12))
                 )
-
+            
             Text(transaction.title)
                 .font(.system(size: 16))
                 .foregroundStyle(.primary)
-
+            
             Spacer()
-
+            
             Text(formatCurrency(transaction.amount, showSign: true, isIncome: transaction.isIncome))
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(transaction.isIncome ? .green : .red)
@@ -300,20 +337,20 @@ private struct TransactionRow: View {
 private struct MonthYearPickerSheet: View {
     @Binding var selection: Date
     @Environment(\.dismiss) private var dismiss
-
+    
     @State private var month: Int
     @State private var year: Int
-
+    
     private let months = Calendar.current.monthSymbols
     private let years: [Int] = Array(1900...10000)
-
+    
     init(selection: Binding<Date>) {
         _selection = selection
         let calendar = Calendar.current
         _month = State(initialValue: calendar.component(.month, from: selection.wrappedValue) - 1)
         _year = State(initialValue: calendar.component(.year, from: selection.wrappedValue))
     }
-
+    
     var body: some View {
         NavigationStack {
             HStack(spacing: 0) {
@@ -323,7 +360,7 @@ private struct MonthYearPickerSheet: View {
                     }
                 }
                 .pickerStyle(.wheel)
-
+                
                 Picker("Year", selection: $year) {
                     ForEach(years, id: \.self) { y in
                         Text(String(y)).tag(y)
@@ -369,10 +406,10 @@ private func formatCurrency(_ amount: Double, showSign: Bool, isIncome: Bool = t
     formatter.groupingSeparator = "."
     formatter.decimalSeparator = ","
     formatter.maximumFractionDigits = 0
-
+    
     let magnitude = abs(amount)
     let numberString = formatter.string(from: NSNumber(value: magnitude)) ?? "\(Int(magnitude))"
-
+    
     guard showSign else {
         return "Rp\(numberString)"
     }
@@ -383,4 +420,5 @@ private func formatCurrency(_ amount: Double, showSign: Bool, isIncome: Bool = t
 #Preview {
     TrackerView()
         .modelContainer(SwiftDataService.makePreviewContainer(seeded: true))
+        .environment(AppContainer.shared)
 }

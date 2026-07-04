@@ -33,6 +33,6 @@ extension Double {
     /// For plain-string contexts outside SwiftUI (PromptBuilder, AIChatViewModel's
     /// AI-context builder) — same formatting via string interpolation.
     var idrFormatted: String {
-        self.formatted(.idr)
+        self.formatted(FloatingPointFormatStyle<Double>.Currency.idr)
     }
 }

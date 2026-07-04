@@ -83,8 +83,10 @@
 			membershipExceptions = (
 				AppTargets/ShareExtension/ShareViewController.swift,
 				Core/Capture/ReceiptCaptureService.swift,
-				Core/Database/SwiftDataService.swift,
+				Core/Database/Models/ChatMessage.swift,
+				Core/Database/Models/ChatSession.swift,
 				Core/Database/Models/Transaction.swift,
+				Core/Database/SwiftDataService.swift,
 				Core/Notifications/NotificationService.swift,
 				Core/Sharing/AppGroup.swift,
 				Core/Sharing/DeepLink.swift,

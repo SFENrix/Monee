@@ -46,7 +46,7 @@ enum SwiftDataService {
 
     /// In-memory container for #Preview and unit tests — nothing touches disk, nothing
     /// leaks between runs.
-    static func makePreviewContainer(seeded: Bool = false) -> ModelContainer {
+    @MainActor static func makePreviewContainer(seeded: Bool = false) -> ModelContainer {
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         do {
             let container = try ModelContainer(for: schema, configurations: [config])
