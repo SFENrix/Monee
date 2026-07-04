@@ -2,10 +2,16 @@
 //  AIChatView.swift
 //  FreelanceFinance
 //
-//  Created by Rio Ferdinand on 02/07/26.
+//  Merged 03/07/26 — combines the design team's visual layer (gradient background,
+//  mascot empty state, ChatBubble/ChatInputBar) with the existing functional layer
+//  (AIChatViewModel, SwiftData persistence, chat history, income estimate onboarding).
 //
-//  Chat UI for the AI Buddy feature. Kept single-file for now (mirrors the pattern used in
-//  ContentView.swift) — split into smaller files later if this grows.
+//  ASSUMPTION: MessageText, ChatBubble, ChatInputBar, and PufferfishMascot are defined
+//  elsewhere in the project already (delivered separately by the design team). This file
+//  does NOT redeclare them.
+//
+//  Fixed vs. previous version: removed a duplicate `.sheet(showingHistory)` and a
+//  duplicate `.task { }` block that were left in from a merge.
 //
 
 import SwiftUI
@@ -13,75 +19,61 @@ import SwiftData
 
 struct AIChatView: View {
     @Environment(\.modelContext) private var modelContext
-        @Environment(AppContainer.self) private var appContainer
-        @StateObject private var viewModel = AIChatViewModel()
-        @State private var draft: String = ""
-        @State private var showingHistory = false
-        @State private var showingIncomeEstimate = false
-
+    @Environment(AppContainer.self) private var appContainer
+    @StateObject private var viewModel = AIChatViewModel()
     @Query(sort: \ChatSession.updatedAt, order: .reverse) private var sessions: [ChatSession]
 
+    /// TODO: no user-name field exists anywhere yet (UserFinancialProfile only stores
+    /// an income estimate). Hardcoded for now — wire to a real name once onboarding
+    /// captures one, or drop the personalized greeting.
+    var userFirstName: String = "there"
+
+    @State private var draft: String = ""
+    @State private var showingHistory = false
+    @State private var showingIncomeEstimate = false
+
     var body: some View {
-        NavigationStack {
+        ZStack {
+            backgroundGradient
+
             VStack(spacing: 0) {
                 if let error = viewModel.errorMessage {
                     ErrorBanner(message: error)
+                        .padding(.top, 60)
                 }
 
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 12) {
-                            if viewModel.messages.isEmpty {
-                                EmptyStateView()
-                                    .padding(.top, 60)
-                            }
-                            ForEach(viewModel.messages) { message in
-                                MessageBubble(message: message)
-                                    .id(message.id)
-                            }
-                            if viewModel.isThinking {
-                                ThinkingBubble()
-                            }
-                        }
-                        .padding()
-                    }
-                    .dismissKeyboardOnTap()   // ← add this
-                    .onChange(of: viewModel.messages.count) { _, _ in
-                        scrollToBottom(proxy)
-                    }
-                    .scrollDismissesKeyboard(.interactively)
+                if viewModel.messages.isEmpty {
+                    emptyState
+                } else {
+                    conversationList
                 }
 
-                InputBar(text: $draft, isSending: viewModel.isThinking, onSend: send)
+                ChatInputBar(
+                    text: $draft,
+                    onSend: send,
+                    onMicTap: startDictation
+                )
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
+                .disabled(viewModel.isThinking)
             }
-            .navigationTitle(viewModel.currentSessionTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        showingHistory = true
-                    } label: {
-                        Image(systemName: "clock.arrow.circlepath")
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
+        }
+        .overlay(alignment: .topTrailing) {
+            HStack(spacing: 10) {
+                if !viewModel.messages.isEmpty {
+                    circularButton(systemImage: "plus") {
                         viewModel.startNewSession()
-                    } label: {
-                        Image(systemName: "square.and.pencil")
                     }
                 }
-            }
-            .sheet(isPresented: $showingHistory) {
-                ChatHistoryListView(sessions: sessions) { session in
-                    viewModel.loadSession(session, modelContext: modelContext)
-                    showingHistory = false
+                circularButton(systemImage: "clock") {
+                    showingHistory = true
                 }
             }
-            .task {
-                viewModel.bootstrap(modelContext: modelContext)
-            }
-        }.sheet(isPresented: $showingHistory) {
+            .padding(.trailing, 20)
+            .padding(.top, 8)
+        }
+        .sheet(isPresented: $showingHistory) {
             ChatHistoryListView(sessions: sessions) { session in
                 viewModel.loadSession(session, modelContext: modelContext)
                 showingHistory = false
@@ -96,8 +88,107 @@ struct AIChatView: View {
                 showingIncomeEstimate = true
             }
         }
-    
     }
+
+    // MARK: - Button
+
+    private func circularButton(systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 40, height: 40)
+                .background(Circle().fill(Color.accentColor))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Empty State
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            Spacer(minLength: 40)
+
+            VStack(spacing: 8) {
+                Text("Hi \(userFirstName)!")
+                    .font(.system(size: 30, weight: .bold))
+                    .foregroundStyle(Color.accentColor)
+
+                Text("Want to treat yourself without the guilt?")
+                    .font(.system(size: 17))
+                    .foregroundStyle(.primary)
+            }
+
+            PufferfishMascot(size: 190)
+                .padding(.top, 24)
+
+            Spacer()
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 64)
+    }
+
+    // MARK: - Conversation
+
+    /// Bridges the real SwiftData-backed ChatMessage into the design layer's lightweight
+    /// MessageText, so ChatBubble stays decoupled from persistence entirely.
+    private var displayMessages: [MessageText] {
+        viewModel.messages.map { message in
+            MessageText(
+                
+                sender: message.role == .user ? .user : .assistant,
+                text: message.content
+            )
+        }
+    }
+
+    private var conversationList: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    ForEach(displayMessages) { message in
+                        ChatBubble(message: message)
+                            .id(message.id)
+                    }
+                    if viewModel.isThinking {
+                        ThinkingBubble()
+                            .id("thinking")
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 64)
+            }
+            .dismissKeyboardOnTap()
+            .scrollDismissesKeyboard(.interactively)
+            .onChange(of: viewModel.messages.count) { _, _ in
+                scrollToBottom(proxy)
+            }
+            .onChange(of: viewModel.isThinking) { _, isThinking in
+                guard isThinking else { return }
+                withAnimation { proxy.scrollTo("thinking", anchor: .bottom) }
+            }
+        }
+    }
+
+    private func scrollToBottom(_ proxy: ScrollViewProxy) {
+        guard let last = displayMessages.last else { return }
+        withAnimation {
+            proxy.scrollTo(last.id, anchor: .bottom)
+        }
+    }
+
+    // MARK: - Background
+
+    private var backgroundGradient: some View {
+        LinearGradient(
+            colors: [Color(.systemBackground), Color.blue.opacity(0.08)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+    }
+
+    // MARK: - Actions
 
     private func send() {
         let text = draft
@@ -107,33 +198,13 @@ struct AIChatView: View {
         }
     }
 
-    private func scrollToBottom(_ proxy: ScrollViewProxy) {
-        guard let last = viewModel.messages.last else { return }
-        withAnimation {
-            proxy.scrollTo(last.id, anchor: .bottom)
-        }
+    private func startDictation() {
+        // TODO: voice input isn't in the 7-day POC scope (see freelancer_finance_poc_v3.md).
+        // Leave as a no-op for now, or hide the mic button until this is greenlit.
     }
 }
 
-// MARK: - Message Bubble
-
-private struct MessageBubble: View {
-    let message: ChatMessage
-
-    private var isUser: Bool { message.role == .user }
-
-    var body: some View {
-        HStack {
-            if isUser { Spacer(minLength: 40) }
-            Text(message.content)
-                .padding(12)
-                .background(isUser ? Color.accentColor : Color(.secondarySystemBackground))
-                .foregroundStyle(isUser ? Color.white : Color.primary)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-            if !isUser { Spacer(minLength: 40) }
-        }
-    }
-}
+// MARK: - Thinking Indicator (functional placeholder — restyle to match ChatBubble later)
 
 private struct ThinkingBubble: View {
     var body: some View {
@@ -147,6 +218,8 @@ private struct ThinkingBubble: View {
     }
 }
 
+// MARK: - Error Banner (functional placeholder)
+
 private struct ErrorBanner: View {
     let message: String
     var body: some View {
@@ -156,51 +229,12 @@ private struct ErrorBanner: View {
             .padding(8)
             .frame(maxWidth: .infinity)
             .background(Color.red)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .padding(.horizontal, 16)
     }
 }
 
-private struct EmptyStateView: View {
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "bubble.left.and.bubble.right.fill")
-                .font(.largeTitle)
-                .foregroundStyle(.secondary)
-            Text("Ask AI Buddy anything about your spending")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-    }
-}
-
-// MARK: - Input Bar
-
-private struct InputBar: View {
-    @Binding var text: String
-    let isSending: Bool
-    let onSend: () -> Void
-
-    private var canSend: Bool {
-        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSending
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            TextField("Ask your AI Buddy…", text: $text, axis: .vertical)
-                .textFieldStyle(.roundedBorder)
-                .lineLimit(1...4)
-
-            Button(action: onSend) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.title)
-            }
-            .disabled(!canSend)
-        }
-        .padding()
-        .background(.bar)
-    }
-}
-
-// MARK: - History
+// MARK: - History List (real data — replaces the design mock's ChatHistoryPlaceholder)
 
 private struct ChatHistoryListView: View {
     let sessions: [ChatSession]
@@ -240,4 +274,5 @@ private struct ChatHistoryListView: View {
 #Preview {
     AIChatView()
         .modelContainer(SwiftDataService.makePreviewContainer(seeded: true))
+        .environment(AppContainer.shared)
 }

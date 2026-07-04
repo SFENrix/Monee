@@ -8,17 +8,71 @@
 import SwiftUI
 import SwiftData
 
-struct ContentView: View {
-    var body: some View {
-        TabView {
-            DashboardView()
-                .tabItem { Label("Dashboard", systemImage: "chart.pie.fill") }
+enum AppTab: Hashable {
+    case tracker
+    case profile
+    case aiChat
+}
 
-            AIChatView()
-                .tabItem { Label("AI Buddy", systemImage: "bubble.left.and.bubble.right.fill") }
+struct RootTabView: View {
+    @State private var selectedTab: AppTab = .aiChat
+
+    var body: some View {
+        TabView(selection: $selectedTab) {
+            Tab("Tracker", systemImage: "wallet.bifold.fill", value: AppTab.tracker) {
+                TrackerView()
+            }
+
+            Tab("Profile", systemImage: "person.fill", value: AppTab.profile) {
+                ProfileView()
+            }
+
+    
+            Tab(value: AppTab.aiChat, role: .search) {
+                AIChatView()
+            } label: {
+                Label("Monee",systemImage: "face.smiling")
+            }
         }
     }
 }
+
+// MARK: - Placeholders
+
+// Delete these two once you swap in your real Tracker/Profile views above.
+
+//private struct TrackerView: View {
+//    var body: some View {
+//        NavigationStack {
+//            Text("Tracker — replace with your real view")
+//                .foregroundStyle(.secondary)
+//                .navigationTitle("Tracker")
+//        }
+//    }
+//}
+
+//private struct ProfileView: View {
+//    var body: some View {
+//        NavigationStack {
+//            Text("Profile — replace with your real view")
+//                .foregroundStyle(.secondary)
+//                .navigationTitle("Profile")
+//        }
+//    }
+//}
+//struct ContentView: View {
+   
+//    var body: some View {
+      
+//        TabView {
+//            DashboardView()
+//                .tabItem { Label("Dashboard", systemImage: "chart.pie.fill") }
+//
+//            AIChatView()
+//                .tabItem { Label("AI Buddy", systemImage: "bubble.left.and.bubble.right.fill") }
+//        }
+//    }
+//}
 
 // MARK: - Dashboard
 
@@ -245,7 +299,7 @@ private struct TransactionRow: View {
 }
 
 #Preview {
-    ContentView()
+    RootTabView()
         .modelContainer(SwiftDataService.makePreviewContainer(seeded: true))
         .environment(AppContainer.shared)
 }
