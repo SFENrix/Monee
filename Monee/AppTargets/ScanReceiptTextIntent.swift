@@ -8,9 +8,19 @@
 //
 //  Intended Shortcut (built once, by hand, in the Shortcuts app):
 //    1. Take Screenshot
-//    2. Extract Text from Image  (Shortcuts' built-in Live Text OCR action)
-//    3. Run App Intent → Monee → "Scan Receipt Text", with Captured Text ← step 2's output
-//  Then: Settings → Action Button → Shortcut → pick the above.
+//    2. Run App Intent → Monee → "Scan Receipt Text"
+//  Then: Settings → Action Button → Shortcut → pick the above. Nothing to configure on
+//  the second step — no parameter to bind.
+//
+//  Takes NO parameters on purpose: Shortcuts has no way to bind a previous step's output
+//  to a file/image-typed custom App Intent parameter (it only offers a manual "Choose
+//  File" picker for those — confirmed dead end, not a configuration mistake). So instead
+//  of receiving the screenshot as input, this intent fetches the most recently taken
+//  screenshot itself via ScreenshotFetcher (Photos framework) and runs OCR on it with
+//  VisionOCRService — the same .accurate + language-correction pipeline the Share
+//  Extension and manual capture use. Requires Photo Library read access
+//  (NSPhotoLibraryUsageDescription); permission is requested at app launch
+//  (FreelanceFinanceApp.init()) so it's already resolved by the time this runs.
 //
 //  `openAppWhenRun = false` is the whole point — capturing a transaction should never
 //  interrupt whatever the user was looking at when they pressed the button. This intent's
@@ -24,12 +34,9 @@ import Foundation
 struct ScanReceiptTextIntent: AppIntent {
     static var title: LocalizedStringResource = "Scan Receipt Text"
     static var description = IntentDescription(
-        "Parses on-screen receipt or payment text (captured via Shortcuts) and logs it as a transaction."
+        "Reads your most recent screenshot and logs it as a transaction."
     )
     static var openAppWhenRun: Bool = false
-
-    @Parameter(title: "Captured Text")
-    var rawText: String
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
@@ -37,16 +44,21 @@ struct ScanReceiptTextIntent: AppIntent {
         // and categories must be registered before a notification using them can post.
         NotificationService.configure()
 
+        guard let screenshot = await ScreenshotFetcher.fetchMostRecent() else {
+            return .result(dialog: "Couldn't access your most recent screenshot — check Photo Library access in Settings.")
+        }
+
+        let rawText = (try? await VisionOCRService.recognizeText(from: screenshot)) ?? ""
         let trimmed = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            return .result(dialog: "I didn't get any text to scan.")
+            return .result(dialog: "I couldn't read any text from that screenshot.")
         }
 
         switch ReceiptCaptureService.capture(rawText: trimmed) {
         case .saved(let transaction):
             return .result(dialog: "Logged \(transaction.amount.idrFormatted) — check the notification to fix anything.")
         case .amountNotFound:
-            return .result(dialog: "Captured the text, but couldn't find an amount — nothing was saved.")
+            return .result(dialog: "Read the screenshot, but couldn't find an amount — nothing was saved.")
         }
     }
 }

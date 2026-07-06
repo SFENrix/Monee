@@ -18,6 +18,7 @@ import SwiftData
 
 struct TrackerView: View {
     @Environment(AppContainer.self) private var appContainer
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \Transaction.date, order: .reverse) private var transactions: [Transaction]
 
     @State private var visibleMonth: Date = .now
@@ -103,7 +104,12 @@ struct TrackerView: View {
                 .font(.system(size: 14))
                 .foregroundStyle(.secondary)
             
-            Text(formatCurrency(totalCollected, showSign: false))
+            // showSign only when negative: formatCurrency always shows abs(amount), so
+            // passing showSign: false unconditionally (as before) hid the sign entirely —
+            // a negative running balance (more expenses than income) displayed as a
+            // plain, ever-growing positive number, making expenses look like they
+            // increased "Money Collected" and income look like it decreased it.
+            Text(formatCurrency(totalCollected, showSign: totalCollected < 0, isIncome: false))
                 .font(.system(size: 34, weight: .bold))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -200,6 +206,7 @@ struct TrackerView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 20)
                 .padding(.bottom, 100)
+                
             }
             .onChange(of: visibleMonth) { _, newValue in
                 scrollToMonth(newValue, proxy: proxy)
@@ -246,7 +253,11 @@ struct TrackerView: View {
             
             VStack(spacing: 0) {
                 ForEach(Array(group.transactions.enumerated()), id: \.element.id) { index, txn in
-                    TransactionRow(transaction: txn)
+                    SwipeableTransactionRow(
+                        transaction: txn,
+                        onEdit: { editingTransaction = txn },
+                        onDelete: { modelContext.delete(txn) }
+                    )
                     if index < group.transactions.count - 1 {
                         Divider()
                             .overlay(Color.blue.opacity(0.15))
@@ -329,6 +340,103 @@ private struct TransactionRow: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
+    }
+}
+
+// MARK: - Swipeable Transaction Row
+
+/// Wraps `TransactionRow` with a swipe-to-reveal Edit/Delete pair, matching the
+/// left-swipe pattern from Mail/Messages. Built as a custom drag gesture (rather than
+/// converting the list to a native `List` with `.swipeActions`) to keep the existing
+/// custom ScrollView/LazyVStack layout and row styling exactly as designed.
+private struct SwipeableTransactionRow: View {
+    let transaction: Transaction
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+
+    @State private var offset: CGFloat = 0
+    @State private var isOpen = false
+
+    private let actionWidth: CGFloat = 160
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            HStack(spacing: 0) {
+                Button {
+                    onEdit()
+                    close()
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: "pencil")
+                        Text("Edit").font(.caption2)
+                    }
+                    .frame(width: actionWidth / 2, height: 30)
+                    .frame(maxHeight: .infinity)
+                    .foregroundStyle(.white)
+                    .background(Color.blue)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    close()
+                    onDelete()
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: "trash")
+                        Text("Delete").font(.caption2)
+                    }
+                    .frame(width: actionWidth / 2, height: 30)
+                    .frame(maxHeight: .infinity)
+                    .foregroundStyle(.white)
+                    .background(Color.red)
+                }
+                .buttonStyle(.plain)
+            }
+
+            TransactionRow(transaction: transaction)
+                .background(
+                    // Color.blue.opacity(0.07) alone is ~93% transparent — it visually
+                    // matches the month card's own tint, but doesn't opaquely mask the
+                    // Edit/Delete buttons underneath. Layering it over an opaque base
+                    // keeps the same look while actually hiding the actions at rest.
+                    ZStack {
+                        Color(.systemBackground)
+                        Color.blue.opacity(0.09)
+                            
+                    }
+                )
+                .contentShape(Rectangle())
+                .offset(x: offset)
+                .onTapGesture {
+                    if isOpen { close() }
+                }
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            let base: CGFloat = isOpen ? -actionWidth : 0
+                            let proposed = base + value.translation.width
+                            offset = min(0, max(-actionWidth, proposed))
+                        }
+                        .onEnded { value in
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                                if offset < -actionWidth / 2 {
+                                    offset = -actionWidth
+                                    isOpen = true
+                                } else {
+                                    offset = 0
+                                    isOpen = false
+                                }
+                            }
+                        }
+                )
+        }
+    }
+
+    private func close() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+            offset = 0
+            isOpen = false
+        }
     }
 }
 

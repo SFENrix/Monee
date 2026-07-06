@@ -21,5 +21,7 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Monee reads your most recent screenshot to log a transaction when you use the Action Button.</string>
 </dict>
 </plist>

@@ -141,7 +141,7 @@ class AIChatViewModel: ObservableObject {
             } else {
                 let shown = expenses.prefix(15)
                 let lines = shown.map { txn in
-                    "- \(txn.date.formatted(date: .abbreviated, time: .omitted)): \(txn.title) ($\(String(format: "%.2f", txn.amount)))"
+                    "- \(txn.date.formatted(date: .abbreviated, time: .omitted)): \(txn.title) (\(txn.amount.idrFormatted))"
                 }.joined(separator: "\n")
                 sections.append("EXPENSES (\(expenses.count) logged total, showing \(shown.count) most recent):\n\(lines)")
             }
@@ -152,13 +152,13 @@ class AIChatViewModel: ObservableObject {
             if recentIncomeCount >= 3 {
                 let shown = incomeTxns.prefix(10)
                 let lines = shown.map { txn in
-                    "- \(txn.date.formatted(date: .abbreviated, time: .omitted)): \(txn.title) ($\(String(format: "%.2f", txn.amount)))"
+                    "- \(txn.date.formatted(date: .abbreviated, time: .omitted)): \(txn.title) (\(txn.amount.idrFormatted))"
                 }.joined(separator: "\n")
                 sections.append("INCOME (\(incomeTxns.count) logged total, showing \(shown.count) most recent):\n\(lines)")
             } else if let estimate = UserFinancialProfile.estimatedMonthlyIncome {
                 sections.append("""
                 INCOME: Only \(recentIncomeCount) income transaction(s) logged in the last 30 days — not enough to trust. \
-                The user SELF-REPORTED an estimated monthly income of $\(String(format: "%.2f", estimate)) during setup. \
+                The user SELF-REPORTED an estimated monthly income of \(estimate.idrFormatted) during setup. \
                 Treat this as a rough, possibly outdated guess, not observed fact — say so plainly if you rely on it.
                 """)
             } else {
@@ -171,8 +171,8 @@ class AIChatViewModel: ObservableObject {
         private func formatReserveSummary(_ summary: CashReserveSummary) -> String {
             var lines = [
                 "CASH RESERVE SUMMARY (pre-calculated in code — use these exact numbers, do not recompute):",
-                "- Current reserve: $\(String(format: "%.2f", summary.currentReserve))",
-                "- Average daily spend (last \(summary.windowDays) day\(summary.windowDays == 1 ? "" : "s")): $\(String(format: "%.2f", summary.avgDailyExpense))"
+                "- Current reserve: \(summary.currentReserve.idrFormatted)",
+                "- Average daily spend (last \(summary.windowDays) day\(summary.windowDays == 1 ? "" : "s")): \(summary.avgDailyExpense.idrFormatted)"
             ]
             if let runway = summary.runwayDays {
                 lines.append("- Estimated runway at current pace: \(String(format: "%.0f", runway)) days")
