@@ -58,6 +58,7 @@ struct AIChatView: View {
                 .disabled(viewModel.isThinking)
             }
         }
+        .dismissKeyboardOnTap()
         .overlay(alignment: .topTrailing) {
             HStack(spacing: 10) {
                 if !viewModel.messages.isEmpty {
@@ -157,7 +158,6 @@ struct AIChatView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 64)
             }
-            .dismissKeyboardOnTap()
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: viewModel.messages.count) { _, _ in
                 scrollToBottom(proxy)

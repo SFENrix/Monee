@@ -47,6 +47,7 @@ struct ProfileView: View {
                     .padding(.top, 16)
                     .padding(.bottom, 40)
                 }
+                .dismissKeyboardOnTap()
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
@@ -379,6 +380,7 @@ private struct EditProfileView: View {
                         .textContentType(.name)
                 }
             }
+            .dismissKeyboardOnTap()
             .navigationTitle("Edit Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

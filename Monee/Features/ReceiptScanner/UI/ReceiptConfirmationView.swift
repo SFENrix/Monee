@@ -236,6 +236,7 @@ private struct ConfirmationForm: View {
                 }
             }
         }
+        .dismissKeyboardOnTap()
     }
 }
 
