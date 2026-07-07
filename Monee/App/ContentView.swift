@@ -22,6 +22,7 @@ enum AppTab: Hashable {
     case tracker
     case summary
     case profile
+    case dashboard
     case aiChat
 }
 
@@ -33,6 +34,10 @@ struct RootTabView: View {
         TabView(selection: $selectedTab) {
             Tab("Tracker", systemImage: "wallet.bifold.fill", value: AppTab.tracker) {
                 TrackerView()
+            }
+            
+            Tab("Dashboard", systemImage: "chart.pie.fill", value: AppTab.dashboard){
+                DashboardView()
             }
 
             Tab("Summary", systemImage: "chart.pie.fill", value: AppTab.summary) {
@@ -47,7 +52,7 @@ struct RootTabView: View {
             Tab(value: AppTab.aiChat, role: .search) {
                 AIChatView()
             } label: {
-                Label("Monee",systemImage: "face.smiling")
+                Label("Monee",image: "buntel")
             }
         }
         .task {

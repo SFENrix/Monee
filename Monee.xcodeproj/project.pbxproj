@@ -11,6 +11,7 @@
 		28970B042FF64C5D00C4F18A /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28970B032FF64C5D00C4F18A /* WidgetKit.framework */; };
 		28970B062FF64C5D00C4F18A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28970B052FF64C5D00C4F18A /* SwiftUI.framework */; };
 		28970B172FF64C5E00C4F18A /* WidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 28970B012FF64C5D00C4F18A /* WidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		6C21FD082FFD46580095BD8C /* Charts.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C21FD072FFD46580095BD8C /* Charts.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +52,7 @@
 		28970B032FF64C5D00C4F18A /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		28970B052FF64C5D00C4F18A /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		28C41F352FEFECBE0096CC62 /* Monee.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Monee.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6C21FD072FFD46580095BD8C /* Charts.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Charts.framework; path = System/Library/Frameworks/Charts.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -161,6 +163,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6C21FD082FFD46580095BD8C /* Charts.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -170,6 +173,7 @@
 		28970B022FF64C5D00C4F18A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				6C21FD072FFD46580095BD8C /* Charts.framework */,
 				28970B032FF64C5D00C4F18A /* WidgetKit.framework */,
 				28970B052FF64C5D00C4F18A /* SwiftUI.framework */,
 			);
