@@ -13,6 +13,7 @@ import SwiftData
 enum AppTab: Hashable {
     case tracker
     case profile
+    case dashboard
     case aiChat
 }
 
@@ -24,16 +25,19 @@ struct RootTabView: View {
             Tab("Tracker", systemImage: "wallet.bifold.fill", value: AppTab.tracker) {
                 TrackerView()
             }
+            
+            Tab("Dashboard", systemImage: "chart.pie.fill", value: AppTab.dashboard){
+                DashboardView()
+            }
 
             Tab("Profile", systemImage: "person.fill", value: AppTab.profile) {
                 ProfileView()
             }
-
     
             Tab(value: AppTab.aiChat, role: .search) {
                 AIChatView()
             } label: {
-                Label("Monee",systemImage: "face.smiling")
+                Label("Monee",image: "buntel")
             }
         }
     }

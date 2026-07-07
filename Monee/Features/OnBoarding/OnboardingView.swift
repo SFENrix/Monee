@@ -7,12 +7,24 @@
 //
 //  Updated 07/07/26 — swapped the hand-drawn SwiftUI mascot for the real
 //  "buntel" image asset (Assets.xcassets → buntel).
+//  Updated 07/07/26 — "Get Started" now pushes into OnboardingSetupView,
+//  which owns the rest of the onboarding flow (name/status + financial info).
 //
 
 import SwiftUI
 
 struct OnboardingView: View {
-    var onGetStarted: () -> Void = {}
+    /// Called once the whole onboarding flow (this screen + OnboardingSetupView
+    /// + OnboardingFinancialSetupView) finishes, with everything collected.
+    var onFinish: (
+        _ name: String,
+        _ status: OnboardingStatus?,
+        _ totalMoney: Double?,
+        _ monthlyIncome: Double?,
+        _ monthlyExpense: Double?
+    ) -> Void = { _, _, _, _, _ in }
+
+    @State private var showingSetup = false
 
     var body: some View {
         ZStack {
@@ -50,6 +62,9 @@ struct OnboardingView: View {
             }
             .ignoresSafeArea(edges: .bottom)
         }
+        .fullScreenCover(isPresented: $showingSetup) {
+            OnboardingSetupView(onFinish: onFinish)
+        }
     }
 
     // MARK: - Bottom sheet
@@ -61,7 +76,9 @@ struct OnboardingView: View {
                 .frame(width: 36, height: 4)
                 .padding(.top, 10)
 
-            Button(action: onGetStarted) {
+            Button {
+                showingSetup = true
+            } label: {
                 Text("Get Started")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.white)
