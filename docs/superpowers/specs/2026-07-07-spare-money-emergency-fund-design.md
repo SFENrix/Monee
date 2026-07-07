@@ -2,7 +2,7 @@
 
 **Goal:** Replace the existing blended "Cash Reserve" math with a simpler, fully-traceable "Spare Money" figure that also accounts for a new user-managed "emergency fund" concept, and define the data/logic layer a forthcoming design-team-built "Summary" screen (monthly expense pie chart + emergency fund progress) will consume.
 
-**Scope boundary:** The Summary screen's actual UI is being built separately by the design team. This spec defines everything beneath it — the data model, the math, and the AI integration — so that wiring the real screen in later is mechanical, not a redesign. Nothing in this spec proposes visual layout for the new screen.
+**Scope boundary:** The Summary screen's final visual design will come from the design team later. To unblock testing the new math and AI logic now, this round of work includes a functional **placeholder** Summary screen (plain, unstyled controls — a month picker, a simple pie chart, emergency-fund progress display, an "add to fund" input) wired to the real data contract in §4, following this codebase's existing "UI PLACEHOLDER" convention (e.g. the original `IncomeEstimateSheet`, `OnboardingView` before its restyle) — functional first, restyled later without changing the underlying logic.
 
 ## Background
 
@@ -46,13 +46,14 @@ No new SwiftData model, no schema change. This deliberately avoids the alternati
 
 ## 4. Summary Screen's Data Contract
 
-The design team owns the actual screen; this section defines what it will read.
+The design team will eventually restyle this screen; this section defines what it reads, and the placeholder screen built now in §Scope Boundary implements it directly.
 
-- **Expense-by-category pie chart, month-selectable.** A selected-month state (defaults to the current calendar month) drives a `Dictionary(grouping:)` over that month's expense transactions by `TransactionCategory`, summed per category — the same grouping technique `ProfileView.averageMonthly` already uses via `Calendar.dateComponents([.year, .month], from:)`, but filtering to one specific year+month instead of averaging across all of them. This produces the `[TransactionCategory: Double]` (or equivalent ordered pair list) the pie chart renders from.
+- **Expense-by-category pie chart, month-selectable.** A selected-month state (defaults to the current calendar month) drives a `Dictionary(grouping:)` over that month's expense transactions by `TransactionCategory`, summed per category — the same grouping technique `ProfileView.averageMonthly` already uses via `Calendar.dateComponents([.year, .month], from:)`, but filtering to one specific year+month instead of averaging across all of them. This produces the `[TransactionCategory: Double]` (or equivalent ordered pair list) the pie chart renders from. SwiftUI Charts' `SectorMark` (built-in, no new dependency) is the placeholder's pie chart implementation.
 - **Emergency fund progress:** current total, target (or nil), percent filled — the same three values computed in §1/§3, exposed for display.
 - **Spare Money figure:** for display alongside the pie chart.
+- **Add-to-fund input:** a plain amount field that increments `UserProfile.emergencyFundTotal` — additions only, per current scope (see Out of Scope).
 
-This spec does not define a new file for this data contract — the implementation plan will decide whether it's a small view-model-side helper or inlined into whatever view the design team delivers, once that UI exists.
+The placeholder screen is a real, functional `SummaryView` — plain `Form`/stack layout, no restyling investment — not a throwaway; the design team's later pass restyles this same data contract rather than replacing it.
 
 ## 5. Tab Placement
 
@@ -71,7 +72,7 @@ This spec does not define a new file for this data contract — the implementati
 No XCTest target exists in this project (unchanged constraint from prior plans). Verification will be build + manual run in Simulator once implemented:
 1. With <5 total transactions, AI Buddy states it doesn't have enough data — no Spare Money figure, no blended guess.
 2. With ≥5 transactions and no emergency fund contribution, Spare Money equals `trackedIncome − trackedExpenses` exactly (verifiable by hand against Tracker).
-3. After adding an emergency fund contribution (via whatever the design team's UI provides, or a temporary debug entry point until then), Spare Money drops by exactly that amount.
+3. After adding an emergency fund contribution via the placeholder Summary screen's add-to-fund input, Spare Money drops by exactly that amount.
 4. With no `estimatedMonthlyExpense` set, emergency fund target shows as "not set," not a 0%/0-target figure.
 5. With `estimatedMonthlyExpense` set, target equals exactly `12 ×` that value.
 6. Asking the AI a spending/saving question while the fund is under 100% surfaces a mention of it; asking an unrelated question (e.g. "what category did I spend most on?") does not force it in every time.
