@@ -18,8 +18,10 @@ import SwiftData
 struct ProfileView: View {
     @Query private var transactions: [Transaction]
 
-    @State private var name: String = "Gwen Alyssa"
-    @State private var status: RelationshipStatus = .single
+    @State private var name: String = UserProfile.name ?? ""
+    @State private var status: OnboardingStatus = UserProfile.status ?? .single
+    @State private var estimatedIncomeText: String = UserProfile.estimatedMonthlyIncome.map { String(Int($0)) } ?? ""
+    @State private var estimatedExpenseText: String = UserProfile.estimatedMonthlyExpense.map { String(Int($0)) } ?? ""
     @State private var showingEditProfile = false
 
     private let mintTint = Color(red: 0.55, green: 0.80, blue: 0.70)
@@ -37,6 +39,8 @@ struct ProfileView: View {
                         nameCard
                         statusCard
 
+                        estimatesSection
+
                         overviewSection
                     }
                     .padding(.horizontal, 16)
@@ -50,6 +54,8 @@ struct ProfileView: View {
                 EditProfileView(name: $name)
             }
         }
+        .onChange(of: name) { _, newValue in UserProfile.name = newValue }
+        .onChange(of: status) { _, newValue in UserProfile.status = newValue }
     }
 
     // MARK: - Background
@@ -140,6 +146,46 @@ struct ProfileView: View {
             infoRow(label: "Status", value: status.rawValue)
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Estimates
+
+    private var estimatesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Your Estimates")
+                .font(.title3.bold())
+                .padding(.leading, 4)
+
+            VStack(spacing: 12) {
+                estimateRow(title: "Estimated Monthly Income", text: $estimatedIncomeText) {
+                    UserProfile.estimatedMonthlyIncome = Double($0)
+                }
+                estimateRow(title: "Estimated Monthly Expense", text: $estimatedExpenseText) {
+                    UserProfile.estimatedMonthlyExpense = Double($0)
+                }
+            }
+        }
+    }
+
+    private func estimateRow(title: String, text: Binding<String>, onCommit: @escaping (String) -> Void) -> some View {
+        HStack {
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.secondary)
+            Spacer()
+            TextField("0", text: text)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .onChange(of: text.wrappedValue) { _, newValue in onCommit(newValue) }
+                .frame(width: 120)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+        )
     }
 
     private func infoRow(label: String, value: String) -> some View {
@@ -292,23 +338,12 @@ private struct AvatarView: View {
     }
 }
 
-// MARK: - Relationship status
-
-enum RelationshipStatus: String, CaseIterable, Identifiable {
-    case single = "Single"
-    case inRelationship = "In a Relationship"
-    case married = "Married"
-    case itsComplicated = "It's Complicated"
-
-    var id: String { rawValue }
-}
-
 private struct StatusPickerView: View {
-    @Binding var status: RelationshipStatus
+    @Binding var status: OnboardingStatus
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        List(RelationshipStatus.allCases) { option in
+        List(OnboardingStatus.allCases) { option in
             Button {
                 status = option
                 dismiss()
