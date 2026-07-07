@@ -2,14 +2,17 @@
 //  ContentView.swift
 //  FreelanceFinance
 //
-//  App root: three-tab shell (Tracker / Profile / AI Buddy). The old single-screen
-//  Dashboard this file used to hold was retired once TrackerView + ProfileView (real,
-//  design-provided views) replaced it.
+//  App root: four-tab shell (Tracker / Summary / Profile / AI Buddy). The old
+//  single-screen Dashboard this file used to hold was retired once TrackerView +
+//  ProfileView (real, design-provided views) replaced it.
 //
 //  Updated 07/07/26 — added a non-dismissable fullScreenCover showing OnboardingView
 //  until UserProfile.hasCompletedOnboarding is true, synced into AppContainer on launch
 //  so the same in-memory flag OnboardingView already flips on completion works without
 //  a relaunch.
+//
+//  Updated 07/07/26 — added the Summary tab (placeholder UI) between Tracker and
+//  Profile, surfacing the new Spare Money + emergency fund + expense pie chart.
 //
 
 import SwiftUI
@@ -17,6 +20,7 @@ import SwiftData
 
 enum AppTab: Hashable {
     case tracker
+    case summary
     case profile
     case aiChat
 }
@@ -29,6 +33,10 @@ struct RootTabView: View {
         TabView(selection: $selectedTab) {
             Tab("Tracker", systemImage: "wallet.bifold.fill", value: AppTab.tracker) {
                 TrackerView()
+            }
+
+            Tab("Summary", systemImage: "chart.pie.fill", value: AppTab.summary) {
+                SummaryView()
             }
 
             Tab("Profile", systemImage: "person.fill", value: AppTab.profile) {
