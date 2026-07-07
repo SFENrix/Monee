@@ -114,88 +114,110 @@ class AIChatViewModel: ObservableObject {
         return session
     }
 
- 
-    /// Builds the financial context handed to the AI. Expenses are ALWAYS real data,
-        /// however sparse — never fabricated, since a guessed baseline can mislead the
-        /// model into false confidence. Income falls back to the user's self-reported
-        /// estimate only when real income transactions are too thin to trust, and that
-        /// fallback is explicitly labeled as a guess so the AI can hedge accordingly.
+
+    /// Builds the financial context handed to the AI. Two independent pieces:
+    /// (1) the deterministic Spare Money summary, computed only from logged
+    /// transactions and the user's own emergency fund total — no self-reported
+    /// number is ever mixed into this arithmetic; (2) the user's emergency fund
+    /// status, always shown but always labeled as self-managed/qualitative,
+    /// never treated as a second use of the number already subtracted in (1).
     private func buildFinancialContext(using context: ModelContext) throws -> String {
-            let descriptor = FetchDescriptor<Transaction>(sortBy: [SortDescriptor(\.date, order: .reverse)])
-            let all = try context.fetch(descriptor)
+        let descriptor = FetchDescriptor<Transaction>(sortBy: [SortDescriptor(\.date, order: .reverse)])
+        let all = try context.fetch(descriptor)
 
-            let expenses = all.filter { !$0.isIncome }
-            let incomeTxns = all.filter { $0.isIncome }
+        let expenses = all.filter { !$0.isIncome }
+        let incomeTxns = all.filter { $0.isIncome }
 
-            var sections: [String] = []
+        var sections: [String] = []
 
-            // Pre-calculated — never let the AI redo this math itself.
-            let summary = CashReserveCalculator.summarize(
-                transactions: all,
-                fallbackMonthlyIncome: UserProfile.estimatedMonthlyIncome
-            )
-            sections.append(formatReserveSummary(summary))
+        // Pre-calculated — never let the AI redo this math itself.
+        let summary = CashReserveCalculator.summarize(
+            transactions: all,
+            emergencyFundTotal: UserProfile.emergencyFundTotal
+        )
+        sections.append(formatSpareMoneySummary(summary))
+        sections.append(formatEmergencyFundContext())
 
-            if expenses.isEmpty {
-                sections.append("EXPENSES: No expenses logged yet.")
-            } else {
-                let shown = expenses.prefix(15)
-                let lines = shown.map { txn in
-                    "- \(txn.date.formatted(date: .abbreviated, time: .omitted)): \(txn.title) (\(txn.amount.idrFormatted))"
-                }.joined(separator: "\n")
-                sections.append("EXPENSES (\(expenses.count) logged total, showing \(shown.count) most recent):\n\(lines)")
-            }
-
-            let thirtyDaysAgo = Date().addingTimeInterval(-30 * 86_400)
-            let recentIncomeCount = incomeTxns.filter { $0.date > thirtyDaysAgo }.count
-
-            if recentIncomeCount >= 3 {
-                let shown = incomeTxns.prefix(10)
-                let lines = shown.map { txn in
-                    "- \(txn.date.formatted(date: .abbreviated, time: .omitted)): \(txn.title) (\(txn.amount.idrFormatted))"
-                }.joined(separator: "\n")
-                sections.append("INCOME (\(incomeTxns.count) logged total, showing \(shown.count) most recent):\n\(lines)")
-            } else if let estimate = UserProfile.estimatedMonthlyIncome {
-                sections.append("""
-                INCOME: Only \(recentIncomeCount) income transaction(s) logged in the last 30 days — not enough to trust. \
-                The user SELF-REPORTED an estimated monthly income of \(estimate.idrFormatted) during setup. \
-                Treat this as a rough, possibly outdated guess, not observed fact — say so plainly if you rely on it.
-                """)
-            } else {
-                sections.append("INCOME: No income data available — no transactions logged and no estimate provided. Do not assume any income figure; ask the user directly if you need one.")
-            }
-
-            return sections.joined(separator: "\n\n")
+        if expenses.isEmpty {
+            sections.append("EXPENSES: No expenses logged yet.")
+        } else {
+            let shown = expenses.prefix(15)
+            let lines = shown.map { txn in
+                "- \(txn.date.formatted(date: .abbreviated, time: .omitted)): \(txn.title) (\(txn.amount.idrFormatted))"
+            }.joined(separator: "\n")
+            sections.append("EXPENSES (\(expenses.count) logged total, showing \(shown.count) most recent):\n\(lines)")
         }
 
-        private func formatReserveSummary(_ summary: CashReserveSummary) -> String {
-            var lines = [
-                "CASH RESERVE SUMMARY (pre-calculated in code — use these exact numbers, do not recompute):",
-                "- Current reserve: \(summary.currentReserve.idrFormatted)",
-                "- Average daily spend (last \(summary.windowDays) day\(summary.windowDays == 1 ? "" : "s")): \(summary.avgDailyExpense.idrFormatted)"
-            ]
-            if let runway = summary.runwayDays {
-                lines.append("- Estimated runway at current pace: \(String(format: "%.0f", runway)) days")
-            } else {
-                lines.append("- Runway: not calculable yet (no spending pace established)")
-            }
-            lines.append(summary.isDataSufficient
-                ? "- Confidence: HIGH — based on \(summary.expenseCount) logged expenses."
-                : "- Confidence: LOW — only \(summary.expenseCount) expenses logged. Treat conclusions as rough and say so.")
+        let thirtyDaysAgo = Date().addingTimeInterval(-30 * 86_400)
+        let recentIncomeCount = incomeTxns.filter { $0.date > thirtyDaysAgo }.count
 
-            // This is exactly why this reserve figure can differ from the plain running
-            // balance shown in the Tracker tab — the user has no other way to see this
-            // blend happening, so the AI needs to say so explicitly rather than silently
-            // citing a number that won't match what they see on screen.
-            if summary.estimatedIncomeBlended > 0 {
-                lines.append("""
-                - IMPORTANT: \(summary.estimatedIncomeBlended.idrFormatted) of this reserve is from the user's \
-                self-reported income estimate, not logged transactions — you don't have enough logged income yet. \
-                This is why this number is higher than the running balance shown in their Tracker tab. \
-                Mention this plainly if you state the reserve figure, so it doesn't look like a mismatch or error.
-                """)
-            }
-            return lines.joined(separator: "\n")
+        if recentIncomeCount >= 3 {
+            let shown = incomeTxns.prefix(10)
+            let lines = shown.map { txn in
+                "- \(txn.date.formatted(date: .abbreviated, time: .omitted)): \(txn.title) (\(txn.amount.idrFormatted))"
+            }.joined(separator: "\n")
+            sections.append("INCOME (\(incomeTxns.count) logged total, showing \(shown.count) most recent):\n\(lines)")
+        } else if let estimate = UserProfile.estimatedMonthlyIncome {
+            sections.append("""
+            INCOME: Only \(recentIncomeCount) income transaction(s) logged in the last 30 days — not enough to trust. \
+            The user SELF-REPORTED an estimated monthly income of \(estimate.idrFormatted) during setup. \
+            Treat this as a rough, possibly outdated guess, not observed fact — say so plainly if you rely on it.
+            """)
+        } else {
+            sections.append("INCOME: No income data available — no transactions logged and no estimate provided. Do not assume any income figure; ask the user directly if you need one.")
         }
+
+        return sections.joined(separator: "\n\n")
+    }
+
+    /// The AI is only allowed to state a Spare Money/runway figure or a spending
+    /// verdict once there's enough logged history to trust it — below the threshold,
+    /// it should just encourage the user to log more, not guess with a thin sample.
+    private func formatSpareMoneySummary(_ summary: CashReserveSummary) -> String {
+        guard summary.hasEnoughData else {
+            let remaining = CashReserveCalculator.minimumTransactionsForConfidence - summary.transactionCount
+            return """
+            SPARE MONEY SUMMARY: Not enough data yet — only \(summary.transactionCount) transaction(s) logged. \
+            Log \(remaining) more (backdated entries are fine) before stating a Spare Money figure, runway, or \
+            spending verdict. Do not compute or guess a number — tell the user plainly to log more transactions \
+            first so future advice is reliable.
+            """
+        }
+
+        var lines = [
+            "SPARE MONEY SUMMARY (pre-calculated in code — use these exact numbers, do not recompute):",
+            "- Spare Money: \(summary.spareMoney.idrFormatted)",
+            "- Average daily spend (last \(summary.windowDays) day\(summary.windowDays == 1 ? "" : "s")): \(summary.avgDailyExpense.idrFormatted)"
+        ]
+        if let runway = summary.runwayDays {
+            lines.append("- Estimated runway at current pace: \(String(format: "%.0f", runway)) days")
+        } else {
+            lines.append("- Runway: not calculable yet (no spending pace established)")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    /// Self-managed by the user (added manually, additions-only), already subtracted
+    /// out of Spare Money above — this block is purely qualitative status for the AI
+    /// to reference when relevant (see AppleIntelligenceAdapter's coaching rules),
+    /// never a second use of the number in arithmetic.
+    private func formatEmergencyFundContext() -> String {
+        let total = UserProfile.emergencyFundTotal
+        guard let target = UserProfile.emergencyFundTarget else {
+            return """
+            EMERGENCY FUND: No target set yet — the user hasn't provided an estimated monthly expense, \
+            which the target (12x that estimate) depends on. If relevant, encourage them to complete that \
+            estimate in Profile so their emergency fund progress can be tracked.
+            """
+        }
+        let percent = min(100, Int((total / target) * 100))
+        return """
+        EMERGENCY FUND (self-managed by the user, already subtracted out of Spare Money above — \
+        this is qualitative status only, not a second use of that number):
+        - Current: \(total.idrFormatted)
+        - Target (12x estimated monthly expense): \(target.idrFormatted)
+        - Percent filled: \(percent)%
+        """
+    }
     
 }
