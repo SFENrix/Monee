@@ -27,6 +27,12 @@ struct ChatBubble: View {
         .padding(.vertical, 6)
     }
     
+    private var bubbleColor: Color {
+        message.sender == .user
+            ? Color(red: 0.97, green: 0.87, blue: 0.72)   // peach/tan
+            : Color(red: 0.85, green: 0.92, blue: 0.85)   // mint green
+    }
+    
     private var messageBody: some View {
         Text(message.text)
             .font(.system(size: 17))
@@ -38,13 +44,7 @@ struct ChatBubble: View {
             .padding(.vertical, 18)
             .background(
                 RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .fill(.white)
-                    .overlay {
-                        if message.sender == .assistant {
-                            RoundedRectangle(cornerRadius: 26)
-                                .stroke(Color.blue.opacity(0.15), lineWidth: 1)
-                        }
-                    }
+                    .fill(bubbleColor)
                     .shadow(
                         color: .black.opacity(0.05),
                         radius: 8,
@@ -76,43 +76,5 @@ struct ChatBubble: View {
                     y: 2
                 )
         }
-    }
-}
-#Preview {
-    ZStack {
-        Color(red: 0.94, green: 0.97, blue: 1.0)
-            .ignoresSafeArea()
-
-        VStack(spacing: 20) {
-
-            ChatBubble(
-                message: MessageText(
-                    sender: .assistant,
-                    text: "Hi Gwen! Want to treat yourself without the guilt?"
-                )
-            )
-
-            ChatBubble(
-                message: MessageText(
-                    sender: .user,
-                    text: "Can I afford a new pair of shoes this month?"
-                )
-            )
-
-            ChatBubble(
-                message: MessageText(
-                    sender: .assistant,
-                    text: "Based on your current finances, I'd recommend waiting until your next paycheck. This will keep your emergency fund healthy and avoid unnecessary pressure on your monthly budget."
-                )
-            )
-
-            ChatBubble(
-                message: MessageText(
-                    sender: .user,
-                    text: "Thanks! I'll wait."
-                )
-            )
-        }
-        .padding(.vertical)
     }
 }

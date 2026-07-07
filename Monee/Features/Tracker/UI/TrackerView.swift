@@ -12,6 +12,15 @@
 //    var isIncome: Bool
 //  Adjust field names below if yours differ.
 //
+//  Restyled 06/07/26 — matched to the new hi-fi: dark teal/green header gradient,
+//  cream/peach card + row backgrounds, solid tan month pill, light-blue day badges.
+//
+//  Restyled again 06/07/26 (pass 2) — removed diagonal stripe texture from the header
+//  in favor of a smoother multi-stop gradient blend, added more vertical breathing
+//  room between month sections, taller transaction rows, and full-width (centered,
+//  no left inset) dividers between rows. UI ONLY — no logic, structure, bindings,
+//  or component changes.
+//
 
 import SwiftUI
 import SwiftData
@@ -30,14 +39,14 @@ struct TrackerView: View {
     var body: some View {
         ZStack(alignment: .top) {
             headerBackground
-                .frame(height: 220)
+                .frame(height: 170)
                 .ignoresSafeArea(edges: .top)
             
             VStack(spacing: 0) {
                 header
                     .padding(.horizontal, 20)
-                    .padding(.top, 54)
-                    .padding(.bottom, 36)
+                    .padding(.top, 24)
+                    .padding(.bottom, 24)
                 
                 VStack(spacing: 0) {
                     monthControls
@@ -46,13 +55,30 @@ struct TrackerView: View {
                     
                     transactionList
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(Color(.systemBackground))
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: 28,
+                        bottomLeadingRadius: 0,
+                        bottomTrailingRadius: 0,
+                        topTrailingRadius: 28,
+                        style: .continuous
+                    )
+                    .fill(Color(red: 0.98, green: 0.94, blue: 0.87))
+                )
+                .clipShape(
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: 28,
+                        bottomLeadingRadius: 0,
+                        bottomTrailingRadius: 0,
+                        topTrailingRadius: 28,
+                        style: .continuous
+                    )
                 )
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(Color(red: 0.98, green: 0.94, blue: 0.87))
+        .ignoresSafeArea(edges: .bottom)
         .sheet(isPresented: $showingMonthPicker) {
             MonthYearPickerSheet(selection: $visibleMonth)
                 .presentationDetents([.height(280)])
@@ -102,7 +128,7 @@ struct TrackerView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Money Collected")
                 .font(.system(size: 14))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white.opacity(0.85))
             
             // showSign only when negative: formatCurrency always shows abs(amount), so
             // passing showSign: false unconditionally (as before) hid the sign entirely —
@@ -111,22 +137,23 @@ struct TrackerView: View {
             // increased "Money Collected" and income look like it decreased it.
             Text(formatCurrency(totalCollected, showSign: totalCollected < 0, isIncome: false))
                 .font(.system(size: 34, weight: .bold))
+                .foregroundStyle(.white)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
     
+    /// Smooth multi-stop teal/green gradient — no diagonal stripe texture.
     private var headerBackground: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.62, green: 0.78, blue: 0.97),
-                    Color(red: 0.80, green: 0.89, blue: 0.99)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            DiagonalStripes()
-        }
+        LinearGradient(
+            colors: [
+                Color(red: 0.11, green: 0.27, blue: 0.28),
+                Color(red: 0.20, green: 0.38, blue: 0.35),
+                Color(red: 0.32, green: 0.47, blue: 0.41),
+                Color(red: 0.44, green: 0.56, blue: 0.47)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
     }
     
     // MARK: - Month controls
@@ -138,12 +165,12 @@ struct TrackerView: View {
             } label: {
                 Text(visibleMonth.formatted(.dateTime.month(.abbreviated).year()))
                     .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color(red: 0.18, green: 0.14, blue: 0.22))
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(
                         Capsule()
-                            .fill(Color(.tertiarySystemBackground))
-                            .overlay(Capsule().stroke(Color.black.opacity(0.06), lineWidth: 1))
+                            .fill(Color(red: 0.93, green: 0.86, blue: 0.76))
                     )
             }
             .buttonStyle(.plain)
@@ -162,10 +189,10 @@ struct TrackerView: View {
                 }
             } label: {
                 Image(systemName: "plus")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background(Circle().fill(Color.accentColor))
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(Color(red: 0.35, green: 0.66, blue: 0.86)))
             }
             .buttonStyle(.plain)
             
@@ -193,7 +220,7 @@ struct TrackerView: View {
     private var transactionList: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 20) {
+                LazyVStack(alignment: .leading, spacing: 36) {
                     if transactions.isEmpty {
                         emptyState
                     } else {
@@ -244,11 +271,15 @@ struct TrackerView: View {
     private func monthSection(_ group: MonthGroup) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
+                Image(systemName: "calendar")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Color(red: 0.18, green: 0.14, blue: 0.22))
                 Text(group.monthDate.formatted(.dateTime.month(.wide)))
                     .font(.system(size: 20, weight: .bold))
                 Spacer()
                 Text(group.monthDate.formatted(.dateTime.year()))
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(.black)
             }
             
             VStack(spacing: 0) {
@@ -260,15 +291,15 @@ struct TrackerView: View {
                     )
                     if index < group.transactions.count - 1 {
                         Divider()
-                            .overlay(Color.blue.opacity(0.15))
-                            .padding(.leading, 56)
+                            .overlay(Color.black.opacity(0.06))
                     }
                 }
             }
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.blue.opacity(0.07))
+                    .fill(Color.white)
             )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
     }
     
@@ -286,28 +317,6 @@ struct TrackerView: View {
     }
 }
 
-// MARK: - Diagonal stripe decoration
-
-private struct DiagonalStripes: View {
-    var body: some View {
-        GeometryReader { geo in
-            Path { path in
-                let spacing: CGFloat = 26
-                let width = geo.size.width
-                let height = geo.size.height
-                var x: CGFloat = -height
-                while x < width {
-                    path.move(to: CGPoint(x: x, y: height))
-                    path.addLine(to: CGPoint(x: x + height, y: 0))
-                    x += spacing
-                }
-            }
-            .stroke(Color.white.opacity(0.18), lineWidth: 5)
-        }
-        .clipped()
-    }
-}
-
 // MARK: - Transaction Row
 
 private struct TransactionRow: View {
@@ -321,11 +330,11 @@ private struct TransactionRow: View {
         HStack(spacing: 12) {
             Text(day)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color(red: 0.16, green: 0.40, blue: 0.55))
                 .frame(width: 32, height: 32)
                 .background(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.12))
+                        .fill(Color(red: 0.72, green: 0.87, blue: 0.93))
                 )
             
             Text(transaction.title)
@@ -339,7 +348,7 @@ private struct TransactionRow: View {
                 .foregroundStyle(transaction.isIncome ? .green : .red)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 12)
+        .padding(.vertical, 18)
     }
 }
 
@@ -394,17 +403,7 @@ private struct SwipeableTransactionRow: View {
             }
 
             TransactionRow(transaction: transaction)
-                .background(
-                    // Color.blue.opacity(0.07) alone is ~93% transparent — it visually
-                    // matches the month card's own tint, but doesn't opaquely mask the
-                    // Edit/Delete buttons underneath. Layering it over an opaque base
-                    // keeps the same look while actually hiding the actions at rest.
-                    ZStack {
-                        Color(.systemBackground)
-                        Color.blue.opacity(0.09)
-                            
-                    }
-                )
+                .background(Color.white)
                 .contentShape(Rectangle())
                 .offset(x: offset)
                 .onTapGesture {
