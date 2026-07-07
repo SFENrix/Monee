@@ -2,11 +2,14 @@
 //  UserProfile.swift
 //  Monee
 //
-//  Single source of truth for onboarding-collected, self-reported profile data.
-//  Deliberately NOT SwiftData — these are advisory numbers the AI uses as qualitative
-//  context (targets/estimates), never mixed into CashReserveCalculator's arithmetic
-//  beyond the existing fallback-blend behavior. UserDefaults-backed so it's readable
-//  from a plain class (AIChatViewModel), not just SwiftUI views.
+//  Single source of truth for onboarding-collected, self-reported profile data,
+//  plus the user-managed emergency fund total. None of these numbers are ever
+//  mixed into CashReserveCalculator's income/expense arithmetic directly — the
+//  fund total is subtracted as its own explicit term (see CashReserveCalculator
+//  .summarize), and the profile estimates are handed to the AI as separate,
+//  always-labeled qualitative context (see AIChatViewModel.formatEmergencyFundContext
+//  and formatSpareMoneySummary). UserDefaults-backed so it's readable from a plain
+//  class (AIChatViewModel), not just SwiftUI views.
 //
 
 import Foundation
@@ -27,6 +30,7 @@ enum UserProfile {
     private static let statusKey = "userProfile.status"
     private static let estimatedMonthlyIncomeKey = "userProfile.estimatedMonthlyIncome"
     private static let estimatedMonthlyExpenseKey = "userProfile.estimatedMonthlyExpense"
+    private static let emergencyFundTotalKey = "userProfile.emergencyFundTotal"
     private static let hasCompletedOnboardingKey = "userProfile.hasCompletedOnboarding"
 
     static var name: String? {
@@ -83,6 +87,22 @@ enum UserProfile {
                 UserDefaults.standard.removeObject(forKey: estimatedMonthlyExpenseKey)
             }
         }
+    }
+
+    /// Additions-only running total the user has manually set aside as an emergency
+    /// fund — never mixed into CashReserveCalculator's income/expense sums directly,
+    /// but subtracted from them as its own term (see CashReserveCalculator.summarize).
+    /// Clamped to non-negative; this app has no withdrawal flow yet.
+    static var emergencyFundTotal: Double {
+        get { UserDefaults.standard.double(forKey: emergencyFundTotalKey) }
+        set { UserDefaults.standard.set(max(0, newValue), forKey: emergencyFundTotalKey) }
+    }
+
+    /// 12x the user's estimated monthly expense. `nil` until that estimate exists —
+    /// there's nothing meaningful to show a fill percentage against otherwise.
+    static var emergencyFundTarget: Double? {
+        guard let expense = estimatedMonthlyExpense else { return nil }
+        return expense * 12
     }
 
     static var hasCompletedOnboarding: Bool {
