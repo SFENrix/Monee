@@ -132,7 +132,7 @@ class AIChatViewModel: ObservableObject {
             // Pre-calculated — never let the AI redo this math itself.
             let summary = CashReserveCalculator.summarize(
                 transactions: all,
-                fallbackMonthlyIncome: UserFinancialProfile.estimatedMonthlyIncome
+                fallbackMonthlyIncome: UserProfile.estimatedMonthlyIncome
             )
             sections.append(formatReserveSummary(summary))
 
@@ -155,7 +155,7 @@ class AIChatViewModel: ObservableObject {
                     "- \(txn.date.formatted(date: .abbreviated, time: .omitted)): \(txn.title) (\(txn.amount.idrFormatted))"
                 }.joined(separator: "\n")
                 sections.append("INCOME (\(incomeTxns.count) logged total, showing \(shown.count) most recent):\n\(lines)")
-            } else if let estimate = UserFinancialProfile.estimatedMonthlyIncome {
+            } else if let estimate = UserProfile.estimatedMonthlyIncome {
                 sections.append("""
                 INCOME: Only \(recentIncomeCount) income transaction(s) logged in the last 30 days — not enough to trust. \
                 The user SELF-REPORTED an estimated monthly income of \(estimate.idrFormatted) during setup. \
