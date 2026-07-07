@@ -13,6 +13,10 @@
 //  Fixed vs. previous version: removed a duplicate `.sheet(showingHistory)` and a
 //  duplicate `.task { }` block that were left in from a merge.
 //
+//  Updated 06/07/26 — restyled to match the new mockup: onboarding-style peach/mint
+//  gradient background, updated empty-state header copy/typography, and a soft white
+//  circular history button instead of the solid accent-color one.
+//
 
 import SwiftUI
 import SwiftData
@@ -92,13 +96,16 @@ struct AIChatView: View {
 
     // MARK: - Button
 
+    /// Soft white circular button (history / new session), matching the
+    /// rounded, low-contrast icon buttons used across onboarding.
     private func circularButton(systemImage: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(.white)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color(red: 0.18, green: 0.14, blue: 0.22))
                 .frame(width: 40, height: 40)
-                .background(Circle().fill(Color.accentColor))
+                .background(Circle().fill(Color.white.opacity(0.85)))
+                .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 3)
         }
         .buttonStyle(.plain)
     }
@@ -107,25 +114,28 @@ struct AIChatView: View {
 
     private var emptyState: some View {
         VStack(spacing: 16) {
-            Spacer(minLength: 40)
+            Spacer(minLength: 60)
 
+            Image("buntel")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 190, height: 190)
+            
             VStack(spacing: 8) {
                 Text("Hi \(userFirstName)!")
-                    .font(.system(size: 30, weight: .bold))
-                    .foregroundStyle(Color.accentColor)
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color(red: 0.16, green: 0.35, blue: 0.34))
 
-                Text("Want to treat yourself without the guilt?")
+                Text("Thinking about buying something?")
                     .font(.system(size: 17))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color(red: 0.18, green: 0.14, blue: 0.22))
             }
-
-            PufferfishMascot(size: 190)
-                .padding(.top, 24)
+            .padding(.top, 8)
 
             Spacer()
         }
         .padding(.horizontal, 24)
-        .padding(.top, 64)
+        .padding(.top, 40)
     }
 
     // MARK: - Conversation
@@ -179,9 +189,15 @@ struct AIChatView: View {
 
     // MARK: - Background
 
+    /// Onboarding-style peach/mint gradient, matching Buntel's visual language
+    /// across the rest of the app instead of the flat blue-tinted background.
     private var backgroundGradient: some View {
         LinearGradient(
-            colors: [Color(.systemBackground), Color.blue.opacity(0.08)],
+            colors: [
+                Color(red: 0.97, green: 0.90, blue: 0.82),
+                Color(red: 0.94, green: 0.85, blue: 0.80),
+                Color(red: 0.85, green: 0.92, blue: 0.87)
+            ],
             startPoint: .top,
             endPoint: .bottom
         )

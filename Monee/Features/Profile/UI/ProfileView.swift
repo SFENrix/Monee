@@ -5,6 +5,12 @@
 //  Profile tab: avatar header, editable status row, and an overview section showing
 //  average monthly income/expenses computed from logged transactions.
 //
+//  Restyled 07/07/26 — matched to the new mock: a blurred mint/peach mesh page
+//  background (same family as the onboarding art), a rounded gradient "cover photo"
+//  behind the header with the avatar overlapping its bottom edge, Name promoted
+//  to its own editable card (mirroring Status), and Overview cards tinted mint/peach
+//  instead of plain white. UI ONLY — no logic, bindings, or data flow changes.
+//
 
 import SwiftUI
 import SwiftData
@@ -16,16 +22,20 @@ struct ProfileView: View {
     @State private var status: RelationshipStatus = .single
     @State private var showingEditProfile = false
 
+    private let mintTint = Color(red: 0.55, green: 0.80, blue: 0.70)
+    private let peachTint = Color(red: 0.96, green: 0.65, blue: 0.45)
+
     var body: some View {
         NavigationStack {
             ZStack {
-                backgroundGradient
+                backgroundMesh
 
                 ScrollView {
                     VStack(spacing: 20) {
                         profileHeader
 
-                        statusRow
+                        nameCard
+                        statusCard
 
                         overviewSection
                     }
@@ -35,6 +45,7 @@ struct ProfileView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showingEditProfile) {
                 EditProfileView(name: $name)
             }
@@ -43,71 +54,118 @@ struct ProfileView: View {
 
     // MARK: - Background
 
-    private var backgroundGradient: some View {
-        LinearGradient(
-            colors: [Color(.systemBackground), Color.blue.opacity(0.25)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
+    private var backgroundMesh: some View {
+        ZStack {
+            Color(red: 0.98, green: 0.96, blue: 0.92)
+
+            Circle()
+                .fill(mintTint.opacity(0.35))
+                .frame(width: 300, height: 300)
+                .blur(radius: 90)
+                .offset(x: -140, y: -280)
+
+            Circle()
+                .fill(peachTint.opacity(0.32))
+                .frame(width: 280, height: 280)
+                .blur(radius: 90)
+                .offset(x: 130, y: -120)
+
+            Circle()
+                .fill(mintTint.opacity(0.28))
+                .frame(width: 280, height: 280)
+                .blur(radius: 100)
+                .offset(x: -60, y: 420)
+        }
         .ignoresSafeArea()
     }
 
     // MARK: - Header
 
     private var profileHeader: some View {
-        VStack(spacing: 10) {
+        ZStack(alignment: .bottom) {
+            coverGradient
+
             AvatarView(name: name)
                 .frame(width: 96, height: 96)
-                .padding(.top, 24)
-
-            Text(name)
-                .font(.title2.bold())
-
-            Button {
-                showingEditProfile = true
-            } label: {
-                Text("Edit Name")
-                    .font(.subheadline.weight(.medium))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(Color(.systemGray5).opacity(0.5)))
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
+                .background(
+                    Circle()
+                        .fill(Color(.systemBackground))
+                        .frame(width: 106, height: 106)
+                )
+                .offset(y: 48)
         }
+        .padding(.bottom, 48) // reserves space for the avatar overlapping below the cover
     }
 
-    // MARK: - Status row
+    private var coverGradient: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.90, green: 0.95, blue: 0.90),
+                    Color(red: 0.99, green: 0.87, blue: 0.75)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Circle()
+                .fill(mintTint.opacity(0.55))
+                .frame(width: 180, height: 180)
+                .blur(radius: 55)
+                .offset(x: -100, y: -40)
+            Circle()
+                .fill(peachTint.opacity(0.55))
+                .frame(width: 200, height: 200)
+                .blur(radius: 65)
+                .offset(x: 110, y: 30)
+        }
+        .frame(height: 190)
+        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+    }
 
-    private var statusRow: some View {
+    // MARK: - Name / Status cards
+
+    private var nameCard: some View {
+        Button {
+            showingEditProfile = true
+        } label: {
+            infoRow(label: "Name", value: name)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var statusCard: some View {
         NavigationLink {
             StatusPickerView(status: $status)
         } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Status")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text(status.rawValue)
-                        .font(.body)
-                        .foregroundStyle(.primary)
-                }
-
-                Spacer()
-
-                Image(systemName: "pencil")
-                    .font(.system(size: 15))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 18)
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color(.systemBackground))
-                    .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
-            )
+            infoRow(label: "Status", value: status.rawValue)
         }
         .buttonStyle(.plain)
+    }
+
+    private func infoRow(label: String, value: String) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(.primary)
+            }
+
+            Spacer()
+
+            Image(systemName: "pencil")
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color(.systemBackground))
+                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+        )
     }
 
     // MARK: - Overview
@@ -122,12 +180,14 @@ struct ProfileView: View {
                 OverviewCard(
                     title: "Average Income",
                     amount: averageMonthly(isIncome: true),
-                    isPositive: true
+                    isPositive: true,
+                    tint: mintTint
                 )
                 OverviewCard(
                     title: "Average Expenses",
                     amount: averageMonthly(isIncome: false),
-                    isPositive: false
+                    isPositive: false,
+                    tint: peachTint
                 )
             }
         }
@@ -156,6 +216,7 @@ private struct OverviewCard: View {
     let title: String
     let amount: Double
     let isPositive: Bool
+    let tint: Color
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -178,7 +239,13 @@ private struct OverviewCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(.systemBackground))
+                .fill(
+                    LinearGradient(
+                        colors: [Color(.systemBackground), tint.opacity(0.30)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
                 .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
         )
     }
@@ -209,7 +276,10 @@ private struct AvatarView: View {
         Circle()
             .fill(
                 LinearGradient(
-                    colors: [Color.blue.opacity(0.9), Color.blue.opacity(0.5)],
+                    colors: [
+                        Color(red: 0.93, green: 0.45, blue: 0.65),
+                        Color(red: 0.97, green: 0.65, blue: 0.80)
+                    ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -299,4 +369,3 @@ private struct EditProfileView: View {
     ProfileView()
         .modelContainer(SwiftDataService.makePreviewContainer(seeded: true))
 }
-
