@@ -27,14 +27,10 @@ struct AIChatView: View {
     @StateObject private var viewModel = AIChatViewModel()
     @Query(sort: \ChatSession.updatedAt, order: .reverse) private var sessions: [ChatSession]
 
-    /// TODO: no user-name field exists anywhere yet (UserFinancialProfile only stores
-    /// an income estimate). Hardcoded for now — wire to a real name once onboarding
-    /// captures one, or drop the personalized greeting.
-    var userFirstName: String = "there"
+    var userFirstName: String { UserProfile.name ?? "there" }
 
     @State private var draft: String = ""
     @State private var showingHistory = false
-    @State private var showingIncomeEstimate = false
 
     var body: some View {
         ZStack {
@@ -83,14 +79,8 @@ struct AIChatView: View {
                 showingHistory = false
             }
         }
-        .sheet(isPresented: $showingIncomeEstimate) {
-            IncomeEstimateSheet()
-        }
         .task {
             viewModel.bootstrap(modelContext: modelContext)
-            if !appContainer.isUserOnboarded && !UserFinancialProfile.hasEstimate {
-                showingIncomeEstimate = true
-            }
         }
     }
 
