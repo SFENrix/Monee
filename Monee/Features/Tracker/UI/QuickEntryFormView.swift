@@ -22,6 +22,13 @@
 //  trailing Spacer so content stays pinned to the top) before the background/clipShape
 //  so the card now always fills the sheet.
 //
+//  Fixed 07/07/26 — the Date pill previously hid a real DatePicker underneath a fake
+//  label using near-zero opacity so only the custom pill showed. The `.compact` style's
+//  calendar overlay renders as a child of that same view, so it inherited the ~0% opacity
+//  too — tapping "opened" the picker but it was invisible, making the date untappable in
+//  practice. Replaced with a Button that presents the DatePicker in an explicit `.popover`,
+//  so the picker always renders at full opacity regardless of the pill's own styling.
+//
 
 import SwiftUI
 import SwiftData
@@ -35,6 +42,8 @@ struct QuickEntryFormView: View {
 
     /// Non-nil when opened to fix up an already-saved Transaction (notification tap-to-edit).
     var editing: Transaction?
+
+    @State private var showingDatePicker = false
 
     private var accentTeal: Color { Color(red: 0.29, green: 0.60, blue: 0.60) }
 
@@ -56,19 +65,24 @@ struct QuickEntryFormView: View {
                     .font(.system(size: 17))
                     .foregroundStyle(.primary)
 
-                ZStack(alignment: .leading) {
+                Button {
+                    showingDatePicker = true
+                } label: {
+                    pillLabel(dateText)
+                }
+                .buttonStyle(.plain)
+                .popover(isPresented: $showingDatePicker) {
                     DatePicker(
                         "Date",
                         selection: $viewModel.date,
                         displayedComponents: .date
                     )
-                    .datePickerStyle(.compact)
+                    .datePickerStyle(.graphical)
                     .labelsHidden()
                     .tint(accentTeal)
-                    .opacity(0.011) // keep native tap target/interaction, hide its default look
-
-                    pillLabel(dateText)
-                        .allowsHitTesting(false)
+                    .padding()
+                    .frame(width: 320, height: 400)
+                    .presentationCompactAdaptation(.popover)
                 }
                 .padding(.leading, 12)
 

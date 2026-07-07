@@ -55,6 +55,16 @@ struct ProfileView: View {
                 EditProfileView(name: $name)
             }
         }
+        .onAppear {
+            // @State only reads UserProfile once, at this view's init — if SwiftUI
+            // constructs this tab's view before onboarding finishes writing UserProfile
+            // (Tab content creation timing isn't guaranteed lazy), these would otherwise
+            // stay stale/blank until the app relaunches. Re-sync every time this appears.
+            name = UserProfile.name ?? ""
+            status = UserProfile.status ?? .single
+            estimatedIncomeText = UserProfile.estimatedMonthlyIncome.map { String(Int($0)) } ?? ""
+            estimatedExpenseText = UserProfile.estimatedMonthlyExpense.map { String(Int($0)) } ?? ""
+        }
         .onChange(of: name) { _, newValue in UserProfile.name = newValue }
         .onChange(of: status) { _, newValue in UserProfile.status = newValue }
     }
