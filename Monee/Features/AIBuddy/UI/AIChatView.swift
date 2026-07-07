@@ -23,7 +23,6 @@ import SwiftData
 
 struct AIChatView: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(AppContainer.self) private var appContainer
     @StateObject private var viewModel = AIChatViewModel()
     @Query(sort: \ChatSession.updatedAt, order: .reverse) private var sessions: [ChatSession]
 
