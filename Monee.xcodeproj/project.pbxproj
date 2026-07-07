@@ -81,6 +81,7 @@
 		28970B1D2FF6575B00C4F18A /* Exceptions for "Monee" folder in "ShareExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				AppTargets/ShareExtension/ShareConfirmationView.swift,
 				AppTargets/ShareExtension/ShareViewController.swift,
 				Core/Capture/ReceiptCaptureService.swift,
 				Core/Database/Models/ChatMessage.swift,

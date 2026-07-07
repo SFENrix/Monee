@@ -21,12 +21,19 @@
 import Foundation
 
 struct CashReserveSummary {
-    let currentReserve: Double       // income logged - expenses logged, all time
+    let currentReserve: Double       // income logged - expenses logged, all time (may include
+                                      // a blended income estimate — see estimatedIncomeBlended)
     let avgDailyExpense: Double      // trailing window average (up to 30 days of history)
     let runwayDays: Double?          // currentReserve / avgDailyExpense; nil if no spend pace yet
     let windowDays: Int              // how many days avgDailyExpense is actually based on
     let expenseCount: Int
     let isDataSufficient: Bool       // fewer than 5 expenses or <7 days span = low confidence
+    /// Portion of `currentReserve` that comes from the user's self-reported income estimate
+    /// rather than logged transactions — 0 when there's enough real income history to not
+    /// need it. This is exactly the amount by which this reserve figure can diverge from a
+    /// plain sum of logged transactions (e.g. the Tracker's running balance) — surfaced so
+    /// callers (the AI Buddy) can say plainly when and why the two numbers don't match.
+    let estimatedIncomeBlended: Double
 }
 
 enum CashReserveCalculator {
@@ -73,7 +80,8 @@ enum CashReserveCalculator {
             runwayDays: runwayDays,
             windowDays: window,
             expenseCount: expenses.count,
-            isDataSufficient: isDataSufficient
+            isDataSufficient: isDataSufficient,
+            estimatedIncomeBlended: effectiveIncome - loggedIncome
         )
     }
 }

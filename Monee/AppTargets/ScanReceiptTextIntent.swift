@@ -30,6 +30,7 @@
 
 import AppIntents
 import Foundation
+import SwiftUI
 
 struct ScanReceiptTextIntent: AppIntent {
     static var title: LocalizedStringResource = "Scan Receipt Text"
@@ -39,26 +40,40 @@ struct ScanReceiptTextIntent: AppIntent {
     static var openAppWhenRun: Bool = false
 
     @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog {
+    func perform() async throws -> some IntentResult & ShowsSnippetView {
         // Defensive — a background-launched intent may skip the app's normal init path,
         // and categories must be registered before a notification using them can post.
         NotificationService.configure()
 
         guard let screenshot = await ScreenshotFetcher.fetchMostRecent() else {
-            return .result(dialog: "Couldn't access your most recent screenshot — check Photo Library access in Settings.")
+            return .result(view: ReceiptConfirmationSnippetView(
+                state: .error("Couldn't access your most recent screenshot — check Photo Library access in Settings.")
+            ))
         }
 
         let rawText = (try? await VisionOCRService.recognizeText(from: screenshot)) ?? ""
         let trimmed = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            return .result(dialog: "I couldn't read any text from that screenshot.")
+            return .result(view: ReceiptConfirmationSnippetView(
+                state: .error("I couldn't read any text from that screenshot.")
+            ))
         }
 
-        switch ReceiptCaptureService.capture(rawText: trimmed) {
-        case .saved(let transaction):
-            return .result(dialog: "Logged \(transaction.amount.idrFormatted) — check the notification to fix anything.")
+        switch ReceiptCaptureService.stage(rawText: trimmed) {
+        case .needsConfirmation(let parsed):
+            return .result(view: ReceiptConfirmationSnippetView(
+                state: .confirming(
+                    title: parsed.suggestedTitle,
+                    amount: parsed.amount ?? 0,
+                    date: parsed.date ?? Date(),
+                    category: parsed.category,
+                    rawKeyword: parsed.keyword
+                )
+            ))
         case .amountNotFound:
-            return .result(dialog: "Read the screenshot, but couldn't find an amount — nothing was saved.")
+            return .result(view: ReceiptConfirmationSnippetView(
+                state: .error("Read the screenshot, but couldn't find an amount — nothing was saved.")
+            ))
         }
     }
 }

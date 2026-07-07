@@ -182,6 +182,19 @@ class AIChatViewModel: ObservableObject {
             lines.append(summary.isDataSufficient
                 ? "- Confidence: HIGH — based on \(summary.expenseCount) logged expenses."
                 : "- Confidence: LOW — only \(summary.expenseCount) expenses logged. Treat conclusions as rough and say so.")
+
+            // This is exactly why this reserve figure can differ from the plain running
+            // balance shown in the Tracker tab — the user has no other way to see this
+            // blend happening, so the AI needs to say so explicitly rather than silently
+            // citing a number that won't match what they see on screen.
+            if summary.estimatedIncomeBlended > 0 {
+                lines.append("""
+                - IMPORTANT: \(summary.estimatedIncomeBlended.idrFormatted) of this reserve is from the user's \
+                self-reported income estimate, not logged transactions — you don't have enough logged income yet. \
+                This is why this number is higher than the running balance shown in their Tracker tab. \
+                Mention this plainly if you state the reserve figure, so it doesn't look like a mismatch or error.
+                """)
+            }
             return lines.joined(separator: "\n")
         }
     

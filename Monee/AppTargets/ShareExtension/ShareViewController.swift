@@ -3,38 +3,46 @@
 //  Monee
 //
 //  Handles shared plain text and shared images identically: extract text (directly for
-//  text shares, via VisionOCRService for image shares), then hand off to
-//  ReceiptCaptureService — the exact same save-or-skip rule the Action Button flow uses.
-//  A failed/empty OCR result on an image share behaves the same as "no amount found":
-//  nothing is saved, and the photo itself is not retained anywhere after this runs.
+//  text shares, via VisionOCRService for image shares), then stage it through
+//  ReceiptCaptureService — the exact same parsing rule the Action Button flow uses.
+//  Unlike the old version, nothing is saved until the user confirms Income/Expense on
+//  ShareConfirmationView. A failed/empty OCR result on an image share behaves the same
+//  as "no amount found": nothing is staged, and the photo itself is not retained
+//  anywhere after this runs.
 //
 //  ⚠️ Requires this file's Info.plist NSExtensionActivationRule to accept BOTH
 //  public.plain-text and public.image (see ShareExtension/Info.plist).
 //
 //  ⚠️ Target membership: this file needs RegexParser.swift, Transaction.swift,
 //  AppGroup.swift, VisionOCRServiceError.swift, CurrencyFormat.swift,
-//  NotificationService.swift, and ReceiptCaptureService.swift all added to the
-//  ShareExtension target in Xcode's File Inspector.
+//  NotificationService.swift, ReceiptCaptureService.swift, and
+//  ShareConfirmationView.swift all added to the ShareExtension target in Xcode's File
+//  Inspector.
 //
-//  ⚠️ UI PLACEHOLDER — bare loading state, not a designed screen.
+//  ⚠️ UI PLACEHOLDER — bare loading/confirmation states, not a designed screen.
 //
 
 import UIKit
+import SwiftUI
 import UniformTypeIdentifiers
 
 class ShareViewController: UIViewController {
 
+    private let loadingLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Reading receipt…"
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
-        let label = UILabel()
-        label.text = "Saving to Monee…"
-        label.textAlignment = .center
-        label.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(label)
+        view.addSubview(loadingLabel)
         NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+            loadingLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            loadingLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
         Task { await handleSharedItem() }
     }
@@ -63,8 +71,7 @@ class ShareViewController: UIViewController {
             return
         }
 
-        capture(rawText: text)
-        finish()
+        stageAndConfirm(rawText: text)
     }
 
     private func handleSharedImage(_ attachment: NSItemProvider) async {
@@ -88,13 +95,48 @@ class ShareViewController: UIViewController {
         }
 
         let text = (try? await VisionOCRService.recognizeText(from: image)) ?? ""
-        capture(rawText: text)
-        finish()
+        stageAndConfirm(rawText: text)
     }
 
-    private func capture(rawText: String) {
+    private func stageAndConfirm(rawText: String) {
         NotificationService.configure() // defensive — extension launch may skip app init
-        _ = ReceiptCaptureService.capture(rawText: rawText)
+
+        switch ReceiptCaptureService.stage(rawText: rawText) {
+        case .amountNotFound:
+            finish()
+        case .needsConfirmation(let parsed):
+            DispatchQueue.main.async { [weak self] in
+                self?.presentConfirmation(for: parsed)
+            }
+        }
+    }
+
+    private func presentConfirmation(for parsed: ParsedReceiptData) {
+        loadingLabel.removeFromSuperview()
+
+        let confirmationView = ShareConfirmationView(parsed: parsed) { [weak self] isIncome in
+            let category: TransactionCategory = isIncome ? .income : parsed.category
+            ReceiptCaptureService.save(
+                title: parsed.suggestedTitle,
+                amount: parsed.amount ?? 0,
+                date: parsed.date ?? Date(),
+                category: category,
+                rawKeyword: parsed.keyword
+            )
+            self?.finish()
+        }
+
+        let hosting = UIHostingController(rootView: confirmationView)
+        addChild(hosting)
+        view.addSubview(hosting.view)
+        hosting.view.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            hosting.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            hosting.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            hosting.view.topAnchor.constraint(equalTo: view.topAnchor),
+            hosting.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+        hosting.didMove(toParent: self)
     }
 
     private func finish() {
