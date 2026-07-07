@@ -411,8 +411,15 @@ private struct SwipeableTransactionRow: View {
                     if isOpen { close() }
                 }
                 .gesture(
-                    DragGesture()
+                    // minimumDistance raised from the default 10 to 24, and gated on
+                    // horizontal movement clearly dominating vertical — a vertical scroll
+                    // flick starting on a row was engaging this recognizer (and fighting
+                    // the ScrollView's own pan gesture for every touch) before the system
+                    // settled on "this is a scroll," which is what made scrolling feel
+                    // sluggish across many on-screen rows.
+                    DragGesture(minimumDistance: 24)
                         .onChanged { value in
+                            guard abs(value.translation.width) > abs(value.translation.height) else { return }
                             let base: CGFloat = isOpen ? -actionWidth : 0
                             let proposed = base + value.translation.width
                             offset = min(0, max(-actionWidth, proposed))
