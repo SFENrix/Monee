@@ -8,13 +8,28 @@
 //  Updated 07/07/26 — swapped the hand-drawn SwiftUI mascot for the real
 //  "buntel" image asset (Assets.xcassets → buntel).
 //
+//  Updated 07/07/26 — now owns the full onboarding chain: pushes to
+//  OnboardingSetupView on "Get Started", and writes the final collected data
+//  (name, status, starting balance, estimated income/expense) to UserProfile
+//  when OnboardingFinancialSetupView (the last step) finishes. Starting balance
+//  is recorded as an ordinary "Starting Balance" Transaction rather than a
+//  special baseline field, so CashReserveCalculator never needs a second code path.
+//
 
 import SwiftUI
+import SwiftData
 
 struct OnboardingView: View {
-    var onGetStarted: () -> Void = {}
+    @Environment(\.modelContext) private var modelContext
+    @Environment(AppContainer.self) private var appContainer
 
     var body: some View {
+        NavigationStack {
+            welcomeScreen
+        }
+    }
+
+    private var welcomeScreen: some View {
         ZStack {
             meshBackground
                 .ignoresSafeArea()
@@ -50,6 +65,14 @@ struct OnboardingView: View {
             }
             .ignoresSafeArea(edges: .bottom)
         }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
+        .navigationDestination(for: OnboardingRoute.self) { route in
+            switch route {
+            case .setup:
+                OnboardingSetupView(onFinish: finishOnboarding)
+            }
+        }
     }
 
     // MARK: - Bottom sheet
@@ -61,7 +84,7 @@ struct OnboardingView: View {
                 .frame(width: 36, height: 4)
                 .padding(.top, 10)
 
-            Button(action: onGetStarted) {
+            NavigationLink(value: OnboardingRoute.setup) {
                 Text("Get Started")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.white)
@@ -119,6 +142,47 @@ struct OnboardingView: View {
                 .offset(x: 0, y: 120)
         }
     }
+
+    // MARK: - Completion
+
+    /// Called once OnboardingFinancialSetupView (the last of the three chained
+    /// screens) finishes. Persists everything collected across the whole chain
+    /// and flips the flags that dismiss the fullScreenCover in RootTabView.
+    private func finishOnboarding(
+        name: String,
+        status: OnboardingStatus?,
+        totalMoney: Double?,
+        monthlyIncome: Double?,
+        monthlyExpense: Double?
+    ) {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        UserProfile.name = trimmedName.isEmpty ? nil : trimmedName
+        UserProfile.status = status
+        UserProfile.estimatedMonthlyIncome = monthlyIncome
+        UserProfile.estimatedMonthlyExpense = monthlyExpense
+
+        if let totalMoney, totalMoney > 0 {
+            let transaction = Transaction(
+                title: "Starting Balance",
+                amount: totalMoney,
+                date: Date(),
+                category: .income,
+                source: .manual
+            )
+            modelContext.insert(transaction)
+            try? modelContext.save()
+        }
+
+        UserProfile.hasCompletedOnboarding = true
+        appContainer.isUserOnboarded = true
+    }
+}
+
+/// Onboarding's own navigation route — a single case today, but a real enum (not
+/// a Bool flag) so the chain can gain intermediate steps later without RootTabView
+/// or the fullScreenCover presentation needing to change.
+private enum OnboardingRoute: Hashable {
+    case setup
 }
 
 // MARK: - Bottom sheet shape
@@ -146,4 +210,6 @@ private struct TopCurveShape: Shape {
 
 #Preview {
     OnboardingView()
+        .environment(AppContainer.shared)
+        .modelContainer(SwiftDataService.makePreviewContainer())
 }
