@@ -209,16 +209,6 @@ struct OnboardingSetupView: View {
     }
 }
 
-/// Rough life/family situation captured during onboarding — used to give the
-/// Overview section something to anchor to before real transactions exist.
-enum OnboardingStatus: String, CaseIterable, Identifiable {
-    case single = "Single"
-    case married = "Married"
-    case withChild = "With child"
-
-    var id: String { rawValue }
-}
-
 /// Symmetric "arch" — low at both edges, rising toward the center — so the
 /// white sheet appears to hug the mascot's silhouette rather than cutting
 /// across it with a flat or diagonal edge.
