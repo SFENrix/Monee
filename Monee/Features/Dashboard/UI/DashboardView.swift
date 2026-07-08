@@ -4,21 +4,20 @@
 //
 //  Created by Gwen Marvella Yeanlynn on 07/07/26.
 //
-
-//
-//  DashboardView.swift
-//  FreelanceFinance
-//
 //  Emergency-savings tracker + Expense/Income summary donut chart, following
 //  the same visual language as TrackerView/ProfileView (teal header strip,
 //  cream sheet with rounded top).
 //
-//  DATA NOTE: your `Transaction` model (date, title, amount, isIncome) has no
-//  `category` field, so the chart/legend map each transaction's `title` into
-//  one of four fixed categories (Entertainment, Household, Food, Other) via
-//  simple keyword matching. If you add a real `category` field to
-//  `Transaction` later, swap `category(for:)` below to read it directly
-//  instead of guessing from the title.
+//  Rewired 08/07/26 — replaced the original @AppStorage("emergencyFundTarget"/
+//  "emergencyFundCurrent") pair (hardcoded defaults, disconnected from the rest
+//  of the app) with UserProfile.emergencyFundTotal/.emergencyFundTarget, the
+//  same store CashReserveCalculator and the AI Buddy's context already read —
+//  so what this screen shows, what "Add" writes, and what the AI reasons about
+//  are one number, not three independent ones. Also replaced the keyword-based
+//  title-matching category guesser (written before Transaction had a real
+//  `category` field) with the actual TransactionCategory enum. This also
+//  retires the separate placeholder `SummaryView`/"Summary" tab that briefly
+//  duplicated this screen — one dashboard, correctly wired.
 //
 
 import SwiftUI
@@ -28,12 +27,7 @@ import Charts
 struct DashboardView: View {
     @Query(sort: \Transaction.date, order: .reverse) private var transactions: [Transaction]
 
-    /// Target for the emergency fund. Wire this to your real settings/model
-    /// (e.g. the `totalMoney` collected during onboarding) if you'd rather
-    /// not use AppStorage.
-    @AppStorage("emergencyFundTarget") private var emergencyFundTarget: Double = 10_000_000
-    @AppStorage("emergencyFundCurrent") private var emergencyFundCurrent: Double = 3_050_000
-
+    @State private var emergencyFundCurrent: Double = UserProfile.emergencyFundTotal
     @State private var selectedKind: Kind = .expense
     @State private var selectedMonth: Date = Date()
     @State private var showingAddFund = false
@@ -52,8 +46,15 @@ struct DashboardView: View {
         .background(headerGradient.ignoresSafeArea(edges: .top))
         .sheet(isPresented: $showingAddFund) {
             AddEmergencyFundSheet { amountAdded, _ in
-                emergencyFundCurrent += amountAdded
+                let newTotal = emergencyFundCurrent + amountAdded
+                UserProfile.emergencyFundTotal = newTotal
+                emergencyFundCurrent = newTotal
             }
+        }
+        .onAppear {
+            // UserProfile is a plain UserDefaults store, not @Observable — re-sync
+            // in case it changed elsewhere (e.g. Profile) since this view last appeared.
+            emergencyFundCurrent = UserProfile.emergencyFundTotal
         }
     }
 
@@ -66,31 +67,38 @@ struct DashboardView: View {
                 .foregroundStyle(.white)
 
             HStack(spacing: 12) {
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(Color.white.opacity(0.25))
+                if let target = UserProfile.emergencyFundTarget {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(Color.white.opacity(0.25))
 
-                        Capsule()
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color(red: 0.96, green: 0.75, blue: 0.45),
-                                        Color(red: 0.95, green: 0.65, blue: 0.35)
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
+                            Capsule()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color(red: 0.96, green: 0.75, blue: 0.45),
+                                            Color(red: 0.95, green: 0.65, blue: 0.35)
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
                                 )
-                            )
-                            .frame(width: geo.size.width * progressFraction)
+                                .frame(width: geo.size.width * progressFraction(target: target))
 
-                        Text("\(formatRupiahPlain(emergencyFundCurrent)) / \(formatRupiahPlain(emergencyFundTarget))")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.black.opacity(0.75))
-                            .padding(.leading, 14)
+                            Text("\(emergencyFundCurrent.idrFormatted) / \(target.idrFormatted)")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(.black.opacity(0.75))
+                                .padding(.leading, 14)
+                        }
                     }
+                    .frame(height: 32)
+                } else {
+                    Text("Set an Estimated Monthly Expense in Profile to calculate a target.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .frame(height: 32)
                 }
-                .frame(height: 32)
 
                 Button {
                     showingAddFund = true
@@ -112,9 +120,9 @@ struct DashboardView: View {
         .padding(.bottom, 24)
     }
 
-    private var progressFraction: CGFloat {
-        guard emergencyFundTarget > 0 else { return 0 }
-        return min(CGFloat(emergencyFundCurrent / emergencyFundTarget), 1)
+    private func progressFraction(target: Double) -> CGFloat {
+        guard target > 0 else { return 0 }
+        return min(CGFloat(emergencyFundCurrent / target), 1)
     }
 
     // MARK: - Summary card
@@ -186,7 +194,7 @@ struct DashboardView: View {
                 Text("Total")
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
-                Text(formatRupiahPlain(total))
+                Text(total.idrFormatted)
                     .font(.system(size: 20, weight: .bold))
             }
         }
@@ -215,7 +223,7 @@ struct DashboardView: View {
 
                     Spacer()
 
-                    Text(formatRupiahPlain(item.amount))
+                    Text(item.amount.idrFormatted)
                         .font(.system(size: 16))
                         .foregroundStyle(.secondary)
                 }
@@ -248,72 +256,18 @@ struct DashboardView: View {
         }
     }
 
-    /// The four fixed categories shown in the legend, with the icon + color
-    /// pulled straight from the reference UI: Entertainment (orange /
-    /// confetti), Household (green / house), Food (teal / fork & knife),
-    /// Other (coral / ellipsis).
-    private enum Category: String, CaseIterable {
-        case entertainment = "Entertainment"
-        case household = "Household"
-        case food = "Food"
-        case other = "Other"
-
-        var iconSystemName: String {
-            switch self {
-            case .entertainment: return "party.popper.fill"
-            case .household: return "house.fill"
-            case .food: return "fork.knife"
-            case .other: return "ellipsis"
-            }
-        }
-
-        var color: Color {
-            switch self {
-            case .entertainment: return Color(red: 0.93, green: 0.62, blue: 0.32)
-            case .household: return Color(red: 0.47, green: 0.68, blue: 0.48)
-            case .food: return Color(red: 0.33, green: 0.66, blue: 0.78)
-            case .other: return Color(red: 0.84, green: 0.44, blue: 0.40)
-            }
-        }
-    }
-
-    /// Maps a transaction's free-text `title` to one of the four fixed
-    /// categories via keyword matching. Swap this out for a real
-    /// `txn.category` lookup once that field exists on `Transaction`.
-    private func category(for title: String) -> Category {
-        let lower = title.lowercased()
-
-        if lower.contains("entertain") || lower.contains("movie") || lower.contains("cinema")
-            || lower.contains("game") || lower.contains("concert") || lower.contains("netflix")
-            || lower.contains("spotify") {
-            return .entertainment
-        }
-
-        if lower.contains("house") || lower.contains("rent") || lower.contains("util")
-            || lower.contains("electric") || lower.contains("water") || lower.contains("internet")
-            || lower.contains("wifi") {
-            return .household
-        }
-
-        if lower.contains("food") || lower.contains("restaurant") || lower.contains("grocer")
-            || lower.contains("eat") || lower.contains("coffee") || lower.contains("lunch")
-            || lower.contains("dinner") || lower.contains("snack") {
-            return .food
-        }
-
-        return .other
-    }
-
+    /// Grouped by the real TransactionCategory (icon/color come straight from
+    /// that enum, so this always matches how Tracker/QuickEntryFormView label
+    /// the same categories elsewhere in the app) — no more keyword guessing.
     private var categoryTotals: [CategoryTotal] {
-        let grouped = Dictionary(grouping: filteredTransactions) { category(for: $0.title) }
+        let grouped = Dictionary(grouping: filteredTransactions, by: { $0.category })
 
-        return Category.allCases.compactMap { cat -> CategoryTotal? in
-            guard let items = grouped[cat], !items.isEmpty else { return nil }
-            return CategoryTotal(
-                id: cat.rawValue,
-                label: cat.rawValue,
-                iconSystemName: cat.iconSystemName,
-                color: cat.color,
+        return grouped.map { category, items in
+            CategoryTotal(
+                id: category.rawValue,
+                label: category.rawValue,
+                iconSystemName: category.iconName,
+                color: category.tint,
                 amount: items.reduce(0) { $0 + $1.amount }
             )
         }
@@ -423,19 +377,9 @@ private struct AddEmergencyFundSheet: View {
                 .padding(.vertical, 14)
             }
         }
+        .dismissKeyboardOnTap()
         .presentationDetents([.height(220)])
     }
-}
-
-// MARK: - Formatting
-
-private func formatRupiahPlain(_ value: Double) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    formatter.groupingSeparator = "."
-    formatter.maximumFractionDigits = 0
-    let number = formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
-    return "Rp\(number)"
 }
 
 #Preview {
