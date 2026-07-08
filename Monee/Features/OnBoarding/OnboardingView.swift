@@ -22,15 +22,8 @@ import SwiftUI
 import SwiftData
 
 struct OnboardingView: View {
-    /// Called once the whole onboarding flow (this screen + OnboardingSetupView
-    /// + OnboardingFinancialSetupView) finishes, with everything collected.
-    var onFinish: (
-        _ name: String,
-        _ status: OnboardingStatus?,
-        _ totalMoney: Double?,
-        _ monthlyIncome: Double?,
-        _ monthlyExpense: Double?
-    ) -> Void = { _, _, _, _, _ in }
+    @Environment(\.modelContext) private var modelContext
+    @Environment(AppContainer.self) private var appContainer
 
     @State private var showingSetup = false
 
@@ -77,7 +70,7 @@ struct OnboardingView: View {
             .ignoresSafeArea(edges: .bottom)
         }
         .fullScreenCover(isPresented: $showingSetup) {
-            OnboardingSetupView(onFinish: onFinish)
+            OnboardingSetupView(onFinish: finishOnboarding)
         }
     }
 
