@@ -133,6 +133,7 @@ class AIChatViewModel: ObservableObject {
         // Pre-calculated — never let the AI redo this math itself.
         let summary = CashReserveCalculator.summarize(
             transactions: all,
+            startingBalance: UserProfile.startingBalance,
             emergencyFundTotal: UserProfile.emergencyFundTotal
         )
         sections.append(formatSpareMoneySummary(summary))

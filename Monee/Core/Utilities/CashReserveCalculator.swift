@@ -7,20 +7,21 @@
 //  This computes the real numbers in Swift so the AI's job is to interpret and coach,
 //  not to do arithmetic it might get wrong.
 //
-//  Spare Money = tracked income - tracked expenses - the user's emergency fund total.
-//  Deliberately does NOT blend in any self-reported income estimate — that number lives
-//  in UserProfile and is handed to the AI as separate qualitative context (see
-//  AIChatViewModel.formatSpareMoneySummary / formatEmergencyFundContext). Blending used
-//  to happen here; it produced figures that looked arbitrary to the user once few
-//  transactions were logged. This file now answers exactly one question: what do the
-//  user's logged transactions (and their own emergency fund contributions) say is
-//  actually free to spend, and is there enough logged history to trust the answer.
+//  Spare Money = onboarding starting balance + tracked income - tracked expenses -
+//  the user's emergency fund total. Deliberately does NOT blend in any self-reported
+//  income estimate — that number lives in UserProfile and is handed to the AI as
+//  separate qualitative context (see AIChatViewModel.formatSpareMoneySummary /
+//  formatEmergencyFundContext). Blending used to happen here; it produced figures
+//  that looked arbitrary to the user once few transactions were logged. This file
+//  now answers exactly one question: what do the user's logged transactions (plus
+//  their starting balance and emergency fund contributions) say is actually free to
+//  spend, and is there enough logged history to trust the answer.
 //
 
 import Foundation
 
 struct CashReserveSummary {
-    let spareMoney: Double           // tracked income - tracked expenses - emergency fund total
+    let spareMoney: Double           // startingBalance + tracked income - tracked expenses - emergency fund total
     let avgDailyExpense: Double      // trailing window average (up to 30 days of history)
     let runwayDays: Double?          // spareMoney / avgDailyExpense; nil if no spend pace yet
     let windowDays: Int              // how many days avgDailyExpense is actually based on
@@ -38,13 +39,13 @@ enum CashReserveCalculator {
     /// date+count rule — simpler to reason about and to explain in the UI.
     static let minimumTransactionsForConfidence = 5
 
-    static func summarize(transactions: [Transaction], emergencyFundTotal: Double) -> CashReserveSummary {
+    static func summarize(transactions: [Transaction], startingBalance: Double, emergencyFundTotal: Double) -> CashReserveSummary {
         let income = transactions.filter { $0.isIncome }
         let expenses = transactions.filter { !$0.isIncome }
 
         let totalIncome = income.reduce(0) { $0 + $1.amount }
         let totalExpenses = expenses.reduce(0) { $0 + $1.amount }
-        let spareMoney = totalIncome - totalExpenses - emergencyFundTotal
+        let spareMoney = startingBalance + totalIncome - totalExpenses - emergencyFundTotal
 
         // Trailing-window burn rate — the more real history exists, the more this
         // smooths out one-off spikes instead of one big purchase skewing everything.

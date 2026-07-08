@@ -40,6 +40,9 @@ struct TrackerView: View {
     /// go stale if the user adds/withdraws funds on the Summary tab and switches back
     /// here without the view being recreated. Same pattern DashboardView already uses.
     @State private var emergencyFundTotal: Double = UserProfile.emergencyFundTotal
+    /// Set once during onboarding, never changes after — still mirrored into @State
+    /// for the same reason as emergencyFundTotal above (UserProfile isn't @Observable).
+    @State private var startingBalance: Double = UserProfile.startingBalance
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -108,6 +111,7 @@ struct TrackerView: View {
         .onAppear {
             handleRoute(appContainer.pendingRoute)
             emergencyFundTotal = UserProfile.emergencyFundTotal
+            startingBalance = UserProfile.startingBalance
         }
     }
 
@@ -126,13 +130,15 @@ struct TrackerView: View {
 
     // MARK: - Header
 
-    /// Running balance minus whatever the user has set aside in the emergency fund —
-    /// money moved into (or out of) the fund on the Summary tab isn't logged as a
-    /// separate Transaction, so it has to be netted out here explicitly. This keeps
-    /// "Money Collected" in sync with CashReserveCalculator's Spare Money figure,
-    /// which already subtracts the same UserProfile.emergencyFundTotal.
+    /// Onboarding's starting balance, plus logged transactions, minus whatever the
+    /// user has set aside in the emergency fund — neither the starting balance nor
+    /// fund moves are logged as Transactions, so both have to be netted in here
+    /// explicitly. This keeps "Money Collected" in sync with CashReserveCalculator's
+    /// Spare Money figure, which adds/subtracts the same two UserProfile values.
     private var totalCollected: Double {
-        transactions.reduce(0) { $0 + ($1.isIncome ? $1.amount : -$1.amount) } - emergencyFundTotal
+        startingBalance
+            + transactions.reduce(0) { $0 + ($1.isIncome ? $1.amount : -$1.amount) }
+            - emergencyFundTotal
     }
     
     private var header: some View {

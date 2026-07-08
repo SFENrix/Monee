@@ -31,6 +31,7 @@ enum UserProfile {
     private static let estimatedMonthlyIncomeKey = "userProfile.estimatedMonthlyIncome"
     private static let estimatedMonthlyExpenseKey = "userProfile.estimatedMonthlyExpense"
     private static let emergencyFundTotalKey = "userProfile.emergencyFundTotal"
+    private static let startingBalanceKey = "userProfile.startingBalance"
     private static let hasCompletedOnboardingKey = "userProfile.hasCompletedOnboarding"
 
     static var name: String? {
@@ -89,13 +90,27 @@ enum UserProfile {
         }
     }
 
-    /// Additions-only running total the user has manually set aside as an emergency
-    /// fund — never mixed into CashReserveCalculator's income/expense sums directly,
-    /// but subtracted from them as its own term (see CashReserveCalculator.summarize).
-    /// Clamped to non-negative; this app has no withdrawal flow yet.
+    /// Running total the user has manually set aside as an emergency fund — never
+    /// mixed into CashReserveCalculator's income/expense sums directly, but
+    /// subtracted from them as its own term (see CashReserveCalculator.summarize).
+    /// Clamped to non-negative. Adjustable both up (DashboardView's add flow) and
+    /// down (its withdraw flow).
     static var emergencyFundTotal: Double {
         get { UserDefaults.standard.double(forKey: emergencyFundTotalKey) }
         set { UserDefaults.standard.set(max(0, newValue), forKey: emergencyFundTotalKey) }
+    }
+
+    /// The "Current Balance" figure collected once during onboarding. Deliberately
+    /// NOT recorded as a Transaction — it's a baseline the running balance starts
+    /// from, not an event that happened, so it doesn't inflate the 5-transaction
+    /// confidence threshold or show up in the expense/income category breakdown.
+    /// Set once during onboarding; this app has no UI to edit it afterward.
+    /// Added into both TrackerView's displayed balance and CashReserveCalculator's
+    /// Spare Money as its own explicit term (see CashReserveCalculator.summarize),
+    /// so the two stay in sync the same way the emergency fund total does.
+    static var startingBalance: Double {
+        get { UserDefaults.standard.double(forKey: startingBalanceKey) }
+        set { UserDefaults.standard.set(max(0, newValue), forKey: startingBalanceKey) }
     }
 
     /// 12x the user's estimated monthly expense. `nil` until that estimate exists —

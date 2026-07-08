@@ -13,16 +13,21 @@
 //  Updated 07/07/26 — now owns the full onboarding chain: pushes to
 //  OnboardingSetupView on "Get Started", and writes the final collected data
 //  (name, status, starting balance, estimated income/expense) to UserProfile
-//  when OnboardingFinancialSetupView (the last step) finishes. Starting balance
-//  is recorded as an ordinary "Starting Balance" Transaction rather than a
-//  special baseline field, so CashReserveCalculator never needs a second code path.
+//  when OnboardingFinancialSetupView (the last step) finishes.
+//
+//  Updated 08/07/26 — "Current Balance" is no longer recorded as a "Starting
+//  Balance" Transaction. It's a baseline the running balance starts from, not
+//  an event that happened — logging it as a transaction meant it inflated the
+//  5-transaction confidence threshold and showed up in the income category
+//  breakdown on day one. Now stored as UserProfile.startingBalance and added
+//  into TrackerView's displayed balance and CashReserveCalculator's Spare
+//  Money as its own explicit term instead.
 //
 
 import SwiftUI
 import SwiftData
 
 struct OnboardingView: View {
-    @Environment(\.modelContext) private var modelContext
     @Environment(AppContainer.self) private var appContainer
 
     @State private var showingSetup = false
@@ -161,18 +166,7 @@ struct OnboardingView: View {
         UserProfile.status = status
         UserProfile.estimatedMonthlyIncome = monthlyIncome
         UserProfile.estimatedMonthlyExpense = monthlyExpense
-
-        if let totalMoney, totalMoney > 0 {
-            let transaction = Transaction(
-                title: "Starting Balance",
-                amount: totalMoney,
-                date: Date(),
-                category: .income,
-                source: .manual
-            )
-            modelContext.insert(transaction)
-            try? modelContext.save()
-        }
+        UserProfile.startingBalance = totalMoney ?? 0
 
         UserProfile.hasCompletedOnboarding = true
         appContainer.isUserOnboarded = true
