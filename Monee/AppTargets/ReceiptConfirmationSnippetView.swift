@@ -10,11 +10,16 @@
 //
 //  Buttons are intent-driven, not state-driven, per the snippet interactivity model:
 //  TextField/local @State edits don't work inside a snippet, so there's no live editing
-//  here — tapping Income immediately triggers ConfirmReceiptAsIncomeIntent, which does
-//  the actual save and ends the flow. "Expense" is a Menu instead of a single Button —
-//  each category is its own pre-configured Button(intent:), so picking a category still
-//  fits the "every interactive control carries its own complete intent" snippet model;
-//  there's no dynamic @State step in between tapping Expense and picking a category.
+//  here — tapping a button immediately triggers the matching ConfirmReceipt...Intent,
+//  which does the actual save and ends the flow.
+//
+//  Updated 08/07/26 — a Menu wrapping the expense categories (tap "Expense" to reveal
+//  a submenu) rendered as a disabled/forbidden control on-device: snippets render a
+//  restricted subset of SwiftUI, and Menu isn't in it — only flat, top-level
+//  Button(intent:) controls are actually interactive here. Replaced with a flat grid
+//  of one button per category (each its own pre-configured intent) instead of a
+//  two-step reveal. ShareConfirmationView's Menu is unaffected — that one runs as an
+//  ordinary hosted SwiftUI view in the Share Extension's own process, not a snippet.
 //
 
 import AppIntents
@@ -50,31 +55,33 @@ struct ReceiptConfirmationSnippetView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                HStack(spacing: 12) {
-                    Menu {
-                        ForEach(TransactionCategory.allCases.filter { $0 != .income }, id: \.self) { expenseCategory in
-                            Button(intent: ConfirmReceiptAsExpenseIntent(
-                                amount: amount,
-                                date: date,
-                                transactionTitle: title,
-                                categoryRawValue: expenseCategory.rawValue,
-                                rawKeyword: rawKeyword
-                            )) {
-                                Label(expenseCategory.rawValue, systemImage: expenseCategory.iconName)
-                            }
-                        }
-                    } label: {
-                        Text("Expense")
-                    }
+                Text("Expense")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
 
-                    Button(intent: ConfirmReceiptAsIncomeIntent(
-                        amount: amount,
-                        date: date,
-                        transactionTitle: title,
-                        rawKeyword: rawKeyword
-                    )) {
-                        Text("Income")
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    ForEach(TransactionCategory.allCases.filter { $0 != .income }, id: \.self) { expenseCategory in
+                        Button(intent: ConfirmReceiptAsExpenseIntent(
+                            amount: amount,
+                            date: date,
+                            transactionTitle: title,
+                            categoryRawValue: expenseCategory.rawValue,
+                            rawKeyword: rawKeyword
+                        )) {
+                            Label(expenseCategory.rawValue, systemImage: expenseCategory.iconName)
+                                .frame(maxWidth: .infinity)
+                        }
                     }
+                }
+
+                Button(intent: ConfirmReceiptAsIncomeIntent(
+                    amount: amount,
+                    date: date,
+                    transactionTitle: title,
+                    rawKeyword: rawKeyword
+                )) {
+                    Text("Income")
+                        .frame(maxWidth: .infinity)
                 }
             }
             .padding()
