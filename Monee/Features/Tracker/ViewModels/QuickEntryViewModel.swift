@@ -34,8 +34,11 @@ final class QuickEntryViewModel: ObservableObject {
     /// of inserting a new one.
     private var editingTransaction: Transaction?
 
+    /// QuickEntryFormView's current UI has no title/description field — only
+    /// amount, date, income/expense, and category — so title can't be a
+    /// requirement here. `save()` derives one automatically when it's empty.
     var canSave: Bool {
-        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (amount ?? 0) > 0
+        (amount ?? 0) > 0
     }
 
     /// Loads an existing Transaction's fields for editing.
@@ -56,16 +59,19 @@ final class QuickEntryViewModel: ObservableObject {
 
     @discardableResult
     func save(using modelContext: ModelContext) -> Bool {
-        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmedTitle.isEmpty else {
-            validationError = "Give this transaction a short description."
-            return false
-        }
         guard let amount, amount > 0 else {
             validationError = "Enter an amount greater than zero."
             return false
         }
+
+        // No title field exists in QuickEntryFormView's current UI — fall back to
+        // a category-derived label (matches ReceiptConfirmationView/editing flows,
+        // which DO have a title field and pre-fill this, so their titles pass
+        // through untouched here).
+        let trimmedInput = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedTitle = trimmedInput.isEmpty
+            ? (isIncome ? "Income" : category.rawValue)
+            : trimmedInput
 
         if let editingTransaction {
             editingTransaction.title = trimmedTitle
