@@ -16,6 +16,8 @@ import SwiftUI
 import SwiftData
 
 struct ProfileView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(AppContainer.self) private var appContainer
     @Query private var transactions: [Transaction]
 
     @State private var name: String = UserProfile.name ?? ""
@@ -23,6 +25,9 @@ struct ProfileView: View {
     @State private var estimatedIncomeText: String = UserProfile.estimatedMonthlyIncome.map { String(Int($0)) } ?? ""
     @State private var estimatedExpenseText: String = UserProfile.estimatedMonthlyExpense.map { String(Int($0)) } ?? ""
     @State private var showingEditProfile = false
+    #if DEBUG
+    @State private var showingResetConfirmation = false
+    #endif
 
     private let mintTint = Color(red: 0.55, green: 0.80, blue: 0.70)
     private let peachTint = Color(red: 0.96, green: 0.65, blue: 0.45)
@@ -42,6 +47,10 @@ struct ProfileView: View {
                         estimatesSection
 
                         overviewSection
+
+                        #if DEBUG
+                        developerSection
+                        #endif
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
@@ -54,6 +63,14 @@ struct ProfileView: View {
             .sheet(isPresented: $showingEditProfile) {
                 EditProfileView(name: $name)
             }
+            #if DEBUG
+            .alert("Reset App?", isPresented: $showingResetConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Reset", role: .destructive) { resetAppForTesting() }
+            } message: {
+                Text("Deletes every transaction and chat, and clears your profile — the app will land back on onboarding, just like a fresh install. This can't be undone.")
+            }
+            #endif
         }
         .onAppear {
             // @State only reads UserProfile once, at this view's init — if SwiftUI
@@ -265,6 +282,45 @@ struct ProfileView: View {
         }
         return monthlyTotals.reduce(0, +) / Double(monthlyTotals.count)
     }
+
+    // MARK: - Developer (DEBUG builds only, never ships to Release/TestFlight)
+
+    #if DEBUG
+    private var developerSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Developer")
+                .font(.title3.bold())
+                .padding(.leading, 4)
+
+            Button(role: .destructive) {
+                showingResetConfirmation = true
+            } label: {
+                infoRow(label: "Testing", value: "Reset App")
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// Wipes UserDefaults (UserProfile) and every SwiftData record, then flips
+    /// AppContainer.isUserOnboarded so the onboarding fullScreenCover reappears
+    /// immediately in this session — no force-quit/relaunch needed, though it
+    /// behaves identically to a fresh install either way.
+    private func resetAppForTesting() {
+        try? modelContext.delete(model: Transaction.self)
+        try? modelContext.delete(model: ChatSession.self)
+        try? modelContext.delete(model: ChatMessage.self)
+        try? modelContext.save()
+
+        UserProfile.resetAll()
+
+        name = ""
+        status = .single
+        estimatedIncomeText = ""
+        estimatedExpenseText = ""
+
+        appContainer.isUserOnboarded = false
+    }
+    #endif
 }
 
 // MARK: - Overview card

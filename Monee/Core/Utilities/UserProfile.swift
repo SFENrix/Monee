@@ -124,4 +124,19 @@ enum UserProfile {
         get { UserDefaults.standard.bool(forKey: hasCompletedOnboardingKey) }
         set { UserDefaults.standard.set(newValue, forKey: hasCompletedOnboardingKey) }
     }
+
+    /// Wipes every key this store owns, so the next app launch (or the next read of
+    /// `hasCompletedOnboarding`) behaves exactly like a fresh install. Only meant to
+    /// be called from a developer-only reset control (see ProfileView's #if DEBUG
+    /// section) — this does NOT touch SwiftData; callers also need to delete
+    /// Transaction/ChatSession/ChatMessage separately for a true fresh start.
+    static func resetAll() {
+        let defaults = UserDefaults.standard
+        for key in [
+            nameKey, statusKey, estimatedMonthlyIncomeKey, estimatedMonthlyExpenseKey,
+            emergencyFundTotalKey, startingBalanceKey, hasCompletedOnboardingKey
+        ] {
+            defaults.removeObject(forKey: key)
+        }
+    }
 }
