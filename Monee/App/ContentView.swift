@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  FreelanceFinance
 //
-//  App root: four-tab shell (Tracker / Dashboard / Profile / AI Buddy). The old
+//  App root: four-tab shell (Tracker / Summary / Profile / AI Buddy). The old
 //  single-screen Dashboard this file used to hold was retired once TrackerView +
 //  ProfileView (real, design-provided views) replaced it.
 //
@@ -17,13 +17,17 @@
 //  emergency fund fields and the real TransactionCategory instead of its own
 //  disconnected AppStorage/keyword-matching version.
 //
+//  Updated 08/07/26 — the surviving tab (backed by DashboardView) is user-facing
+//  "Summary", not "Dashboard" — DashboardView is an internal name only, kept as-is
+//  to avoid an unnecessary rename/file-move churn.
+//
 
 import SwiftUI
 import SwiftData
 
 enum AppTab: Hashable {
     case tracker
-    case dashboard
+    case summary
     case profile
     case aiChat
 }
@@ -38,7 +42,7 @@ struct RootTabView: View {
                 TrackerView()
             }
 
-            Tab("Dashboard", systemImage: "chart.pie.fill", value: AppTab.dashboard) {
+            Tab("Summary", systemImage: "chart.pie.fill", value: AppTab.summary) {
                 DashboardView()
             }
 
