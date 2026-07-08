@@ -19,6 +19,13 @@
 //  retires the separate placeholder `SummaryView`/"Summary" tab that briefly
 //  duplicated this screen — one dashboard, correctly wired.
 //
+//  Updated 08/07/26 — added a withdraw flow alongside the existing add flow, and
+//  wired both to Tracker's "Money Collected": moving money into/out of the fund is
+//  deliberately NOT logged as a Transaction (that would double-subtract against
+//  CashReserveCalculator's Spare Money, which already subtracts emergencyFundTotal
+//  as its own term). Instead TrackerView reads UserProfile.emergencyFundTotal
+//  directly and nets it out of the running balance — see TrackerView.totalCollected.
+//
 
 import SwiftUI
 import SwiftData
@@ -31,6 +38,7 @@ struct DashboardView: View {
     @State private var selectedKind: Kind = .expense
     @State private var selectedMonth: Date = Date()
     @State private var showingAddFund = false
+    @State private var showingWithdrawFund = false
 
     private enum Kind { case expense, income }
 
@@ -45,8 +53,17 @@ struct DashboardView: View {
         }
         .background(headerGradient.ignoresSafeArea(edges: .top))
         .sheet(isPresented: $showingAddFund) {
-            AddEmergencyFundSheet { amountAdded, _ in
+            AddEmergencyFundSheet(mode: .add, currentTotal: emergencyFundCurrent) { amountAdded, _ in
                 let newTotal = emergencyFundCurrent + amountAdded
+                UserProfile.emergencyFundTotal = newTotal
+                emergencyFundCurrent = newTotal
+            }
+        }
+        .sheet(isPresented: $showingWithdrawFund) {
+            AddEmergencyFundSheet(mode: .withdraw, currentTotal: emergencyFundCurrent) { amountWithdrawn, _ in
+                // Clamped defensively — the sheet already disables Done above the
+                // available total, this just guards against it going negative.
+                let newTotal = max(0, emergencyFundCurrent - amountWithdrawn)
                 UserProfile.emergencyFundTotal = newTotal
                 emergencyFundCurrent = newTotal
             }
@@ -99,6 +116,19 @@ struct DashboardView: View {
                         .foregroundStyle(.white.opacity(0.85))
                         .frame(height: 32)
                 }
+
+                Button {
+                    showingWithdrawFund = true
+                } label: {
+                    Image(systemName: "minus")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(Color.white.opacity(0.25)))
+                }
+                .buttonStyle(.plain)
+                .disabled(emergencyFundCurrent <= 0)
+                .opacity(emergencyFundCurrent <= 0 ? 0.5 : 1)
 
                 Button {
                     showingAddFund = true
@@ -303,15 +333,44 @@ struct DashboardView: View {
     }
 }
 
-// MARK: - Add Emergency Savings sheet
+// MARK: - Add/Withdraw Emergency Savings sheet
 
 private struct AddEmergencyFundSheet: View {
-    /// (amountAdded, date)
+    enum Mode {
+        case add
+        case withdraw
+
+        var title: String {
+            switch self {
+            case .add: return "Add Emergency Savings"
+            case .withdraw: return "Withdraw from Savings"
+            }
+        }
+
+        var accentColor: Color {
+            switch self {
+            case .add: return Color(red: 0.35, green: 0.72, blue: 0.78)
+            case .withdraw: return Color(red: 0.85, green: 0.45, blue: 0.40)
+            }
+        }
+    }
+
+    let mode: Mode
+    /// Only enforced for `.withdraw` — can't take out more than is actually in the
+    /// fund. Unused for `.add`, which has no upper bound.
+    let currentTotal: Double
+    /// (amount, date) — always positive; DashboardView applies the sign based on `mode`.
     var onDone: (Double, Date) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var amountText = ""
     @State private var date = Date()
+
+    private var enteredAmount: Double? {
+        guard let value = Double(amountText), value > 0 else { return nil }
+        if mode == .withdraw, value > currentTotal { return nil }
+        return value
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -326,13 +385,13 @@ private struct AddEmergencyFundSheet: View {
 
                 Spacer()
 
-                Text("Add Emergency Savings")
+                Text(mode.title)
                     .font(.system(size: 17, weight: .bold))
 
                 Spacer()
 
                 Button("Done") {
-                    if let amount = Double(amountText) {
+                    if let amount = enteredAmount {
                         onDone(amount, date)
                     }
                     dismiss()
@@ -341,8 +400,8 @@ private struct AddEmergencyFundSheet: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(Capsule().fill(Color(red: 0.35, green: 0.72, blue: 0.78)))
-                .disabled(Double(amountText) == nil)
+                .background(Capsule().fill(mode.accentColor))
+                .disabled(enteredAmount == nil)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
@@ -355,7 +414,7 @@ private struct AddEmergencyFundSheet: View {
                     Text("Total")
                         .font(.system(size: 16))
                     Spacer()
-                    
+
                     TextField("IDR", text: $amountText)
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(.trailing)
@@ -376,9 +435,17 @@ private struct AddEmergencyFundSheet: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 14)
             }
+
+            if mode == .withdraw {
+                Text("Up to \(currentTotal.idrFormatted) available")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 4)
+            }
         }
         .dismissKeyboardOnTap()
-        .presentationDetents([.height(220)])
+        .presentationDetents([.height(mode == .withdraw ? 250 : 220)])
     }
 }
 

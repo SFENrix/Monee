@@ -35,6 +35,11 @@ struct TrackerView: View {
     @State private var showingQuickAdd = false
     @State private var showingScanReceipt = false
     @State private var editingTransaction: Transaction?
+    /// Mirrors UserProfile.emergencyFundTotal, re-synced on appear — UserProfile is a
+    /// plain UserDefaults store, not @Observable, so reading it directly inline would
+    /// go stale if the user adds/withdraws funds on the Summary tab and switches back
+    /// here without the view being recreated. Same pattern DashboardView already uses.
+    @State private var emergencyFundTotal: Double = UserProfile.emergencyFundTotal
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -102,6 +107,7 @@ struct TrackerView: View {
         }
         .onAppear {
             handleRoute(appContainer.pendingRoute)
+            emergencyFundTotal = UserProfile.emergencyFundTotal
         }
     }
 
@@ -119,9 +125,14 @@ struct TrackerView: View {
     }
 
     // MARK: - Header
-    
+
+    /// Running balance minus whatever the user has set aside in the emergency fund —
+    /// money moved into (or out of) the fund on the Summary tab isn't logged as a
+    /// separate Transaction, so it has to be netted out here explicitly. This keeps
+    /// "Money Collected" in sync with CashReserveCalculator's Spare Money figure,
+    /// which already subtracts the same UserProfile.emergencyFundTotal.
     private var totalCollected: Double {
-        transactions.reduce(0) { $0 + ($1.isIncome ? $1.amount : -$1.amount) }
+        transactions.reduce(0) { $0 + ($1.isIncome ? $1.amount : -$1.amount) } - emergencyFundTotal
     }
     
     private var header: some View {
