@@ -114,8 +114,7 @@ class ShareViewController: UIViewController {
     private func presentConfirmation(for parsed: ParsedReceiptData) {
         loadingLabel.removeFromSuperview()
 
-        let confirmationView = ShareConfirmationView(parsed: parsed) { [weak self] isIncome in
-            let category: TransactionCategory = isIncome ? .income : parsed.category
+        let confirmationView = ShareConfirmationView(parsed: parsed) { [weak self] category in
             ReceiptCaptureService.save(
                 title: parsed.suggestedTitle,
                 amount: parsed.amount ?? 0,

@@ -10,8 +10,11 @@
 //
 //  Buttons are intent-driven, not state-driven, per the snippet interactivity model:
 //  TextField/local @State edits don't work inside a snippet, so there's no live editing
-//  here — tapping Income or Expense immediately triggers the matching ConfirmReceipt...
-//  Intent, which does the actual save and ends the flow.
+//  here — tapping Income immediately triggers ConfirmReceiptAsIncomeIntent, which does
+//  the actual save and ends the flow. "Expense" is a Menu instead of a single Button —
+//  each category is its own pre-configured Button(intent:), so picking a category still
+//  fits the "every interactive control carries its own complete intent" snippet model;
+//  there's no dynamic @State step in between tapping Expense and picking a category.
 //
 
 import AppIntents
@@ -41,14 +44,26 @@ struct ReceiptConfirmationSnippetView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
+                if category != .income {
+                    Text("Suggested category: \(category.rawValue)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 HStack(spacing: 12) {
-                    Button(intent: ConfirmReceiptAsExpenseIntent(
-                        amount: amount,
-                        date: date,
-                        transactionTitle: title,
-                        categoryRawValue: category.rawValue,
-                        rawKeyword: rawKeyword
-                    )) {
+                    Menu {
+                        ForEach(TransactionCategory.allCases.filter { $0 != .income }, id: \.self) { expenseCategory in
+                            Button(intent: ConfirmReceiptAsExpenseIntent(
+                                amount: amount,
+                                date: date,
+                                transactionTitle: title,
+                                categoryRawValue: expenseCategory.rawValue,
+                                rawKeyword: rawKeyword
+                            )) {
+                                Label(expenseCategory.rawValue, systemImage: expenseCategory.iconName)
+                            }
+                        }
+                    } label: {
                         Text("Expense")
                     }
 
