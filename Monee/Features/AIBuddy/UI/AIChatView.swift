@@ -50,7 +50,7 @@ struct AIChatView: View {
                 ChatInputBar(
                     text: $draft,
                     onSend: send,
-                    onMicTap: startDictation
+//                    onMicTap: startDictation
                 )
                 .padding(.horizontal, 16)
                 .padding(.top, 8)

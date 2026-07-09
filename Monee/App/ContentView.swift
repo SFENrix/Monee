@@ -38,6 +38,11 @@ struct RootTabView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
+            Tab(value: AppTab.aiChat) {
+                AIChatView()
+            } label: {
+                Label("Monee",systemImage: "bubble.left.fill")
+            }
             Tab("Tracker", systemImage: "wallet.bifold.fill", value: AppTab.tracker) {
                 TrackerView()
             }
@@ -49,13 +54,11 @@ struct RootTabView: View {
             Tab("Profile", systemImage: "person.fill", value: AppTab.profile) {
                 ProfileView()
             }
-
-
-            Tab(value: AppTab.aiChat, role: .search) {
-                AIChatView()
-            } label: {
-                Label("Monee",image: "buntel")
-            }
+//            Tab(value: AppTab.aiChat, role: .search) {
+//                AIChatView()
+//            } label: {
+//                Label("Monee",image: "buntel")
+//            }
         }
         .task {
             appContainer.isUserOnboarded = UserProfile.hasCompletedOnboarding

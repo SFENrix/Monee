@@ -5,7 +5,7 @@ struct ChatInputBar: View {
     @Binding var text: String
     var placeholder: String = "Ask Buntel anything"
     var onSend: () -> Void
-    var onMicTap: () -> Void
+//    var onMicTap: () -> Void
 
     @FocusState private var isFocused: Bool
 
@@ -23,14 +23,14 @@ struct ChatInputBar: View {
                 .submitLabel(.send)
                 .onSubmit(sendIfPossible)
 
-            if !canSend {
-                Button(action: onMicTap) {
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
-                .accessibilityLabel("Dictate message")
-            }
+//            if !canSend {
+//                Button(action: onMicTap) {
+//                    Image(systemName: "mic.fill")
+//                        .font(.system(size: 18, weight: .medium))
+//                        .foregroundStyle(.secondary)
+//                }
+//                .accessibilityLabel("Dictate message")
+//            }
 
             Button(action: sendIfPossible) {
                 Image(systemName: "arrow.up.circle.fill")
@@ -57,7 +57,7 @@ struct ChatInputBar: View {
 }
 
 #Preview {
-    ChatInputBar(text: .constant(""), onSend: {}, onMicTap: {})
+    ChatInputBar(text: .constant(""), onSend: {})
         .padding()
         .background(Color(.systemGroupedBackground))
 }
