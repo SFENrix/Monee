@@ -213,7 +213,7 @@ struct DashboardView: View {
                         innerRadius: .ratio(0.62),
                         angularInset: 1.5
                     )
-                    .foregroundStyle(item.color)
+//                    .foregroundStyle(item)
                     .cornerRadius(2)
                 }
                 .frame(height: 260)
@@ -242,11 +242,11 @@ struct DashboardView: View {
 
             ForEach(categoryTotals) { item in
                 HStack(spacing: 12) {
-                    Image(systemName: item.iconSystemName)
-                        .font(.system(size: 14))
-                        .foregroundStyle(.white)
-                        .frame(width: 32, height: 32)
-                        .background(Circle().fill(item.color))
+//                    Image(systemName: item.iconSystemName)
+//                        .font(.system(size: 14))
+//                        .foregroundStyle(.white)
+//                        .frame(width: 32, height: 32)
+//                        .background(Circle().fill(item.color))
 
                     Text(item.label)
                         .font(.system(size: 16))
@@ -272,8 +272,8 @@ struct DashboardView: View {
     private struct CategoryTotal: Identifiable {
         let id: String
         let label: String
-        let iconSystemName: String
-        let color: Color
+//        let iconSystemName: String
+//        let color: Color
         let amount: Double
     }
 
@@ -296,8 +296,8 @@ struct DashboardView: View {
             CategoryTotal(
                 id: category.rawValue,
                 label: category.rawValue,
-                iconSystemName: category.iconName,
-                color: category.tint,
+//                iconSystemName: category.,
+//                color: category.tint,
                 amount: items.reduce(0) { $0 + $1.amount }
             )
         }

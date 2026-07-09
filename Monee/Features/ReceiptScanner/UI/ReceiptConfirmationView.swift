@@ -111,7 +111,7 @@ struct ReceiptConfirmationView: View {
         // .unassigned as a side effect of isIncome's didSet, so category has to be the
         // last write to actually stick.
         entryViewModel.isIncome = parsed.isIncome
-        entryViewModel.category = parsed.isIncome ? .income : parsed.category
+//        entryViewModel.category = parsed.isIncome ? .income : parsed.category
         entryViewModel.source = .ocr
         entryViewModel.rawKeyword = parsed.keyword
     }
@@ -221,7 +221,7 @@ private struct ConfirmationForm: View {
                 Section("Category") {
                     Picker("Category", selection: $viewModel.category) {
                         ForEach(TransactionCategory.allCases.filter { $0 != .income }, id: \.self) { cat in
-                            Label(cat.rawValue, systemImage: cat.iconName).tag(cat)
+//                            Label(cat.rawValue, systemImage: cat.iconName).tag(cat)
                         }
                     }
                     .pickerStyle(.navigationLink)

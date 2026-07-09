@@ -15,42 +15,11 @@ import SwiftUI
 
 enum TransactionCategory: String, Codable, CaseIterable {
     case income = "Income"
-    case software = "Software & Subscriptions"
-    case hardware = "Hardware & Equipment"
-    case marketing = "Marketing & Ads"
-    case travel = "Travel & Transport"
-    case meals = "Meals & Entertainment"
-    case office = "Office Supplies"
-    case transfer = "Bank Transfer"
-    case unassigned = "Unassigned"
-
-    var iconName: String {
-        switch self {
-        case .income: return "banknote.fill"
-        case .software: return "puzzlepiece.extension.fill"
-        case .hardware: return "desktopcomputer"
-        case .marketing: return "megaphone.fill"
-        case .travel: return "airplane"
-        case .meals: return "fork.knife"
-        case .office: return "printer.fill"
-        case .transfer: return "arrow.left.arrow.right.circle.fill"
-        case .unassigned: return "questionmark.circle.fill"
-        }
-    }
-
-    var tint: Color {
-        switch self {
-        case .income: return .green
-        case .software: return .indigo
-        case .hardware: return .gray
-        case .marketing: return .pink
-        case .travel: return .teal
-        case .meals: return .orange
-        case .office: return .brown
-        case .transfer: return .blue
-        case .unassigned: return .secondary
-        }
-    }
+    case food = "Food"
+    case household = "Household"
+    case entertaiment = "Entertaiment"
+    case other = "Other"
+   
 }
 
 /// Where a transaction's data came from — lets the UI (and later, confidence scoring)
@@ -82,7 +51,8 @@ final class Transaction {
         title: String,
         amount: Double,
         date: Date = Date(),
-        category: TransactionCategory = .unassigned,
+        category: TransactionCategory = .other,
+//        category: TransactionCategory = .unassigned,
         source: TransactionSource = .manual,
         rawKeyword: String? = nil
     ) {

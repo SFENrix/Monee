@@ -63,9 +63,9 @@ enum SwiftDataService {
     /// don't render empty-state UI while we're iterating on the Dashboard.
     private static func seedPreviewData(into context: ModelContext) {
         let samples = [
-            Transaction(title: "Adobe Creative Cloud", amount: 54.99, date: .now, category: .software),
-            Transaction(title: "Client lunch — Kopi Kenangan", amount: 12.50, date: .now.addingTimeInterval(-86_400), category: .meals),
-            Transaction(title: "Grab to client office", amount: 8.20, date: .now.addingTimeInterval(-172_800), category: .travel)
+            Transaction(title: "Adobe Creative Cloud", amount: 54.99, date: .now, category: .other),
+            Transaction(title: "Client lunch — Kopi Kenangan", amount: 12.50, date: .now.addingTimeInterval(-86_400), category: .food),
+            Transaction(title: "Grab to client office", amount: 8.20, date: .now.addingTimeInterval(-172_800), category: .entertaiment)
         ]
         samples.forEach { context.insert($0) }
     }

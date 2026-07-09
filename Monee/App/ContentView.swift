@@ -21,6 +21,21 @@
 //  "Summary", not "Dashboard" — DashboardView is an internal name only, kept as-is
 //  to avoid an unnecessary rename/file-move churn.
 //
+//  Updated 08/07/26 — AI tab icon, take 2: dropping `role: .search` (to get
+//  the custom "buntel" icon to render) broke the layout worse — instead of a
+//  4-item tab bar it collapsed into a single full-width bar. Reverted back to
+//  `Tab(role: .search)` with plain `Label("Monee", image: "buntel")`.
+//  `role: .search` is doing its job correctly (separate floating circle,
+//  correct tab bar layout); the blank/tinted circle is very likely the
+//  "buntel" image asset's Render As setting in Assets.xcassets — if it's set
+//  to "Template Image" instead of "Default"/"Original Image", the system tab
+//  chrome will only draw its alpha shape tinted with the accent color
+//  (exactly the flat purple circle we're seeing), and no code-level
+//  .renderingMode() modifier reliably overrides that inside this system
+//  affordance. Fix on the asset itself: select the "buntel" image set in
+//  Assets.xcassets → Attributes inspector → Render As → "Default" (or
+//  "Original Image"), not "Template Image".
+//
 
 import SwiftUI
 import SwiftData
@@ -38,6 +53,10 @@ struct RootTabView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
+            Tab("Chat", systemImage: "message.fill", value: AppTab.aiChat) {
+                AIChatView()
+            }
+            
             Tab("Tracker", systemImage: "wallet.bifold.fill", value: AppTab.tracker) {
                 TrackerView()
             }
@@ -50,12 +69,11 @@ struct RootTabView: View {
                 ProfileView()
             }
 
-
-            Tab(value: AppTab.aiChat, role: .search) {
-                AIChatView()
-            } label: {
-                Label("Monee",image: "buntel")
-            }
+//            Tab(value: AppTab.aiChat, role: .search) {
+//                AIChatView()
+//            } label: {
+//                Label("Chat", systemImage: "message.fill")
+//            }
         }
         .task {
             appContainer.isUserOnboarded = UserProfile.hasCompletedOnboarding

@@ -82,7 +82,7 @@ struct ConfirmReceiptAsExpenseIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let category = TransactionCategory(rawValue: categoryRawValue) ?? .unassigned
+        let category = TransactionCategory(rawValue: categoryRawValue) ?? .other
         let transaction = ReceiptCaptureService.save(
             title: transactionTitle,
             amount: amount,

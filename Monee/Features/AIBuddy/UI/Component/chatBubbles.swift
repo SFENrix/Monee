@@ -78,3 +78,5 @@ struct ChatBubble: View {
         }
     }
 }
+
+
