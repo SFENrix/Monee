@@ -11,6 +11,16 @@
 //  to its own editable card (mirroring Status), and Overview cards tinted mint/peach
 //  instead of plain white. UI ONLY — no logic, bindings, or data flow changes.
 //
+//  Updated 09/07/26 — removed the "Your Estimates" section (Estimated Monthly
+//  Income/Expense). Users were confused by having two similar-looking numbers
+//  (a one-time onboarding estimate vs. a computed average) with no clear
+//  distinction. UserProfile.estimatedMonthlyIncome/.estimatedMonthlyExpense are
+//  still set once during onboarding and still read in the background (AI context,
+//  UserProfile.emergencyFundTarget) — just no longer visible or editable here.
+//  "Overview" also renamed "90 Days Overview", and its average now sums the last
+//  90 days of transactions and divides by a fixed 3, instead of averaging across
+//  however many distinct calendar months happen to have any data.
+//
 
 import SwiftUI
 import SwiftData
@@ -22,8 +32,6 @@ struct ProfileView: View {
 
     @State private var name: String = UserProfile.name ?? ""
     @State private var status: OnboardingStatus = UserProfile.status ?? .single
-    @State private var estimatedIncomeText: String = UserProfile.estimatedMonthlyIncome.map { String(Int($0)) } ?? ""
-    @State private var estimatedExpenseText: String = UserProfile.estimatedMonthlyExpense.map { String(Int($0)) } ?? ""
     @State private var showingEditProfile = false
     #if DEBUG
     @State private var showingResetConfirmation = false
@@ -43,8 +51,6 @@ struct ProfileView: View {
 
                         nameCard
                         statusCard
-
-                        estimatesSection
 
                         overviewSection
 
@@ -70,7 +76,7 @@ struct ProfileView: View {
             } message: {
                 Text("Deletes every transaction and chat, and clears your profile — the app will land back on onboarding, just like a fresh install. This can't be undone.")
             }
-            #endif
+#endif // DEBUG
         }
         .onAppear {
             // @State only reads UserProfile once, at this view's init — if SwiftUI
@@ -79,8 +85,6 @@ struct ProfileView: View {
             // stay stale/blank until the app relaunches. Re-sync every time this appears.
             name = UserProfile.name ?? ""
             status = UserProfile.status ?? .single
-            estimatedIncomeText = UserProfile.estimatedMonthlyIncome.map { String(Int($0)) } ?? ""
-            estimatedExpenseText = UserProfile.estimatedMonthlyExpense.map { String(Int($0)) } ?? ""
         }
         .onChange(of: name) { _, newValue in UserProfile.name = newValue }
         .onChange(of: status) { _, newValue in UserProfile.status = newValue }
@@ -176,46 +180,6 @@ struct ProfileView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Estimates
-
-    private var estimatesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Your Estimates")
-                .font(.title3.bold())
-                .padding(.leading, 4)
-
-            VStack(spacing: 12) {
-                estimateRow(title: "Estimated Monthly Income", text: $estimatedIncomeText) {
-                    UserProfile.estimatedMonthlyIncome = Double($0)
-                }
-                estimateRow(title: "Estimated Monthly Expense", text: $estimatedExpenseText) {
-                    UserProfile.estimatedMonthlyExpense = Double($0)
-                }
-            }
-        }
-    }
-
-    private func estimateRow(title: String, text: Binding<String>, onCommit: @escaping (String) -> Void) -> some View {
-        HStack {
-            Text(title)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.secondary)
-            Spacer()
-            TextField("0", text: text)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing)
-                .onChange(of: text.wrappedValue) { _, newValue in onCommit(newValue) }
-                .frame(width: 120)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
-        )
-    }
-
     private func infoRow(label: String, value: String) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
@@ -246,20 +210,20 @@ struct ProfileView: View {
 
     private var overviewSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Overview")
+            Text("90 Days Overview")
                 .font(.title3.bold())
                 .padding(.leading, 4)
 
             HStack(spacing: 12) {
                 OverviewCard(
                     title: "Average Income",
-                    amount: averageMonthly(isIncome: true),
+                    amount: ninetyDayMonthlyAverage(isIncome: true),
                     isPositive: true,
                     tint: mintTint
                 )
                 OverviewCard(
                     title: "Average Expenses",
-                    amount: averageMonthly(isIncome: false),
+                    amount: ninetyDayMonthlyAverage(isIncome: false),
                     isPositive: false,
                     tint: peachTint
                 )
@@ -267,20 +231,37 @@ struct ProfileView: View {
         }
     }
 
-    /// Average of monthly totals across only the months that actually have
-    /// transactions of that type — months with no data don't drag the average down.
-    private func averageMonthly(isIncome: Bool) -> Double {
-        let calendar = Calendar.current
-        let filtered = transactions.filter { $0.isIncome == isIncome }
-        guard !filtered.isEmpty else { return 0 }
+    /// Sum of the last 90 days' real transactions, plus the onboarding estimate
+    /// pro-rated over whatever portion of that window predates the user's first
+    /// logged transaction of this type — divided by a fixed 3, never by however
+    /// many distinct calendar months happen to have data (a single transaction in
+    /// an otherwise empty window would misleadingly inflate that kind of average).
+    /// The estimate acts as a starting value: it fully backfills an empty window
+    /// on day one, and its contribution shrinks automatically as real history
+    /// accumulates, reaching zero once the first transaction of this type is 90+
+    /// days old. Display-only — never feeds AIChatViewModel/CashReserveCalculator,
+    /// which stay strictly transaction-based (see CashReserveCalculator.swift's
+    /// header for why blending a self-reported number into THAT math was removed).
+    private func ninetyDayMonthlyAverage(isIncome: Bool) -> Double {
+        let now = Date()
+        let windowStart = Calendar.current.date(byAdding: .day, value: -90, to: now) ?? now
+        let matching = transactions.filter { $0.isIncome == isIncome }
 
-        let grouped = Dictionary(grouping: filtered) {
-            calendar.dateComponents([.year, .month], from: $0.date)
+        let realTotal = matching
+            .filter { $0.date >= windowStart }
+            .reduce(0) { $0 + $1.amount }
+
+        let estimate = isIncome ? UserProfile.estimatedMonthlyIncome : UserProfile.estimatedMonthlyExpense
+        var estimateContribution: Double = 0
+        if let estimate {
+            let daysSinceFirst = matching.map(\.date).min().map {
+                min(90, Int(now.timeIntervalSince($0) / 86_400))
+            } ?? 0
+            let coldDays = 90 - daysSinceFirst
+            estimateContribution = estimate * (Double(coldDays) / 30)
         }
-        let monthlyTotals = grouped.values.map { txns in
-            txns.reduce(0) { $0 + $1.amount }
-        }
-        return monthlyTotals.reduce(0, +) / Double(monthlyTotals.count)
+
+        return (realTotal + estimateContribution) / 3
     }
 
     // MARK: - Developer (DEBUG builds only, never ships to Release/TestFlight)
@@ -315,8 +296,6 @@ struct ProfileView: View {
 
         name = ""
         status = .single
-        estimatedIncomeText = ""
-        estimatedExpenseText = ""
 
         appContainer.isUserOnboarded = false
     }
