@@ -88,38 +88,56 @@ struct OnboardingFinancialSetupView: View {
     private var sheetContent: some View {
         VStack(spacing: 28) {
             VStack(spacing: 6) {
-                Text("Almost there...")
+                Text("How are you financially?")
                     .font(.system(size: 20, weight: .bold))
                     .multilineTextAlignment(.center)
 
-                Text("A rough estimate is fine — you can always update this later")
+                Text("This will help me calculate your average transactions")
                     .font(.system(size: 15))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
 
-            VStack(spacing: 16) {
-                fieldCard(label: "Total money") {
+            VStack(spacing: 5) {
+                fieldCard(label: "Starting Balance") {
                     TextField("0", text: $totalMoneyText)
                         .keyboardType(.decimalPad)
                         .font(.system(size: 16))
                         .focused($focusedField, equals: .totalMoney)
                 }
+                Text("GANTI DISINI YAAAA")
+                    .font(.system(size: 11))
+                    .frame(maxWidth: .infinity,minHeight: 1, alignment: .leading)
+                    .padding(.horizontal, 18)
+                    .padding(.bottom,10 )
+                    .foregroundStyle(.secondary)
 
-                fieldCard(label: "Monthly income") {
+                fieldCard(label: "Estimated Monthly income") {
                     TextField("0", text: $monthlyIncomeText)
                         .keyboardType(.decimalPad)
                         .font(.system(size: 16))
                         .focused($focusedField, equals: .monthlyIncome)
                 }
+                Text("GANTI DISINI YAAAA")
+                    .font(.system(size: 11))
+                    .frame(maxWidth: .infinity,minHeight: 1, alignment: .leading)
+                    .padding(.horizontal, 18)
+                    .padding(.bottom,10 )
+                    .foregroundStyle(.secondary)
 
-                fieldCard(label: "Monthly expense") {
+                fieldCard(label: "Estimated Monthly expense") {
                     TextField("0", text: $monthlyExpenseText)
                         .keyboardType(.decimalPad)
                         .font(.system(size: 16))
                         .focused($focusedField, equals: .monthlyExpense)
                 }
+                Text("GANTI DISINI YAAAA")
+                    .font(.system(size: 11))
+                    .frame(maxWidth: .infinity,minHeight: 1, alignment: .leading)
+                    .padding(.horizontal, 18)
+                    .padding(.bottom,10 )
+                    .foregroundStyle(.secondary)
             }
 
             Spacer(minLength: 0)
@@ -172,7 +190,7 @@ struct OnboardingFinancialSetupView: View {
             Spacer()
         }
         .padding(.horizontal, 18)
-        .padding(.vertical, 14)
+        .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)

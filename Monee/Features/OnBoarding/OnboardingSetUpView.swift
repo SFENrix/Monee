@@ -63,23 +63,30 @@ struct OnboardingSetupView: View {
     private var sheetContent: some View {
         VStack(spacing: 28) {
             VStack(spacing: 6) {
-                Text("To give you smarter advice...")
+                Text("Hi I am Buntel!")
                     .font(.system(size: 20, weight: .bold))
                     .multilineTextAlignment(.center)
 
-                Text("Estimate your monthly income and expenses")
+                Text("Help me get to know you better")
                     .font(.system(size: 15))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
 
-            VStack(spacing: 16) {
+            VStack(spacing: 5) {
                 fieldCard(label: "Name") {
                     TextField("Input name", text: $name)
                         .font(.system(size: 16))
                         .focused($nameFieldFocused)
                 }
+                
+                Text("GANTI DISINI YAAAA")
+                    .font(.system(size: 11))
+                    .frame(maxWidth: .infinity,minHeight: 1, alignment: .leading)
+                    .padding(.horizontal, 18)
+                    .padding(.bottom,10 )
+                    .foregroundStyle(.secondary)
 
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -96,6 +103,14 @@ struct OnboardingSetupView: View {
                     }
                 }
                 .buttonStyle(.plain)
+                
+                Text("GANTI DISINI YAAAA")
+                    .font(.system(size: 11))
+                    .frame(maxWidth: .infinity,minHeight: 1, alignment: .leading)
+                    .padding(.horizontal, 18)
+                    .padding(.bottom,10 )
+                    .foregroundStyle(.secondary)
+
 
                 if isStatusExpanded {
                     VStack(spacing: 0) {
@@ -127,8 +142,10 @@ struct OnboardingSetupView: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
+            
 
             Spacer(minLength: 0)
+            
 
             Button {
                 showingFinancialSetup = true
