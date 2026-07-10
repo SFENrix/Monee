@@ -17,6 +17,12 @@
 //  gradient background, updated empty-state header copy/typography, and a soft white
 //  circular history button instead of the solid accent-color one.
 //
+//  Updated 10/07/26 — split the paired top-trailing buttons apart to match the latest
+//  mockup: history (clock) now lives alone in the top-LEADING corner, and the new-chat
+//  button (still top-trailing, still only shown once there's an active conversation)
+//  swapped its icon from a plain "plus" to "square.and.pencil" (a compose glyph reads
+//  more clearly as "start a new chat" than a generic plus).
+//
 
 import SwiftUI
 import SwiftData
@@ -59,19 +65,21 @@ struct AIChatView: View {
             }
         }
         .dismissKeyboardOnTap()
-        .overlay(alignment: .topTrailing) {
-            HStack(spacing: 10) {
-                if !viewModel.messages.isEmpty {
-                    circularButton(systemImage: "plus") {
-                        viewModel.startNewSession()
-                    }
-                }
-                circularButton(systemImage: "clock") {
-                    showingHistory = true
-                }
+        .overlay(alignment: .topLeading) {
+            circularButton(systemImage: "clock") {
+                showingHistory = true
             }
-            .padding(.trailing, 20)
+            .padding(.leading, 20)
             .padding(.top, 8)
+        }
+        .overlay(alignment: .topTrailing) {
+            if !viewModel.messages.isEmpty {
+                circularButton(systemImage: "square.and.pencil") {
+                    viewModel.startNewSession()
+                }
+                .padding(.trailing, 20)
+                .padding(.top, 8)
+            }
         }
         .sheet(isPresented: $showingHistory) {
             ChatHistoryListView(sessions: sessions) { session in

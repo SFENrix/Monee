@@ -8,6 +8,11 @@
 //  before any real transactions exist. Same visual language as the prior
 //  onboarding screens. Shares `ArchCurveShape` with OnboardingSetupView.swift.
 //
+//  Updated 10/07/26 — removed the back button. OnboardingView's "Get Started"
+//  now opens this screen directly (skipping OnboardingSetupView), and since
+//  it's presented as a fullScreenCover with no prior onboarding step to return
+//  to, a back button here had nowhere meaningful to go.
+//
 
 import SwiftUI
 
@@ -54,33 +59,7 @@ struct OnboardingFinancialSetupView: View {
                 .frame(width: 190, height: 190)
                 .padding(.top, 70)
                 .allowsHitTesting(false)
-
-            VStack {
-                HStack {
-                    backButton
-                    Spacer()
-                }
-                Spacer()
-            }
-            .padding(.top, 8)
-            .padding(.leading, 8)
-            .zIndex(1)
         }
-    }
-
-    // MARK: - Back button
-
-    private var backButton: some View {
-        Button {
-            dismiss()
-        } label: {
-            Image(systemName: "chevron.left")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.black.opacity(0.7))
-                .frame(width: 36, height: 36)
-                .background(Circle().fill(Color.white.opacity(0.7)))
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Sheet content

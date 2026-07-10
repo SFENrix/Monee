@@ -21,6 +21,18 @@
 //  no left inset) dividers between rows. UI ONLY — no logic, structure, bindings,
 //  or component changes.
 //
+//  Restyled 09/07/26 — removed the "Jun 2026" month-picker pill (and its sheet) from
+//  monthControls, leaving just the add/scan menu button, and dropped the small
+//  calendar glyph from each month section header ("June   2026" is now plain text,
+//  matching the simplified hi-fi). Manual month navigation now only happens by
+//  scrolling; visibleMonth/scrollToMonth are left in place in case a picker comes
+//  back later (e.g. triggered from elsewhere), they're just not wired to a button here.
+//
+//  Restyled 09/07/26 (pass 2) — moved the add/scan "+" button out of its own row
+//  (monthControls, now removed) and into the top-right corner of the header, next to
+//  the balance text — matches the hi-fi where "June / 2026" is the very first thing
+//  inside the cream card, no button row above it.
+//
 
 import SwiftUI
 import SwiftData
@@ -31,7 +43,6 @@ struct TrackerView: View {
     @Query(sort: \Transaction.date, order: .reverse) private var transactions: [Transaction]
 
     @State private var visibleMonth: Date = .now
-    @State private var showingMonthPicker = false
     @State private var showingQuickAdd = false
     @State private var showingScanReceipt = false
     @State private var editingTransaction: Transaction?
@@ -57,10 +68,6 @@ struct TrackerView: View {
                     .padding(.bottom, 24)
                 
                 VStack(spacing: 0) {
-                    monthControls
-                        .padding(.horizontal, 16)
-                        .padding(.top, 20)
-                    
                     transactionList
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -87,11 +94,6 @@ struct TrackerView: View {
         }
         .background(Color(red: 0.98, green: 0.94, blue: 0.87))
         .ignoresSafeArea(edges: .bottom)
-        .sheet(isPresented: $showingMonthPicker) {
-            MonthYearPickerSheet(selection: $visibleMonth)
-                .presentationDetents([.height(280)])
-                .presentationCornerRadius(28)
-        }
         .sheet(isPresented: $showingQuickAdd) {
             QuickEntryFormView(onSaved: {
                 // @Query already updates `transactions` automatically on save,
@@ -142,57 +144,24 @@ struct TrackerView: View {
     }
     
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Money Collected")
-                .font(.system(size: 14))
-                .foregroundStyle(.white.opacity(0.85))
-            
-            // showSign only when negative: formatCurrency always shows abs(amount), so
-            // passing showSign: false unconditionally (as before) hid the sign entirely —
-            // a negative running balance (more expenses than income) displayed as a
-            // plain, ever-growing positive number, making expenses look like they
-            // increased "Money Collected" and income look like it decreased it.
-            Text(formatCurrency(totalCollected, showSign: totalCollected < 0, isIncome: false))
-                .font(.system(size: 34, weight: .bold))
-                .foregroundStyle(.white)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    
-    /// Smooth multi-stop teal/green gradient — no diagonal stripe texture.
-    private var headerBackground: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.11, green: 0.27, blue: 0.28),
-                Color(red: 0.20, green: 0.38, blue: 0.35),
-                Color(red: 0.32, green: 0.47, blue: 0.41),
-                Color(red: 0.44, green: 0.56, blue: 0.47)
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    }
-    
-    // MARK: - Month controls
-    
-    private var monthControls: some View {
-        HStack {
-            Button {
-                showingMonthPicker = true
-            } label: {
-                Text(visibleMonth.formatted(.dateTime.month(.abbreviated).year()))
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color(red: 0.18, green: 0.14, blue: 0.22))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(
-                        Capsule()
-                            .fill(Color(red: 0.93, green: 0.86, blue: 0.76))
-                    )
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Money Collected")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.white.opacity(0.85))
+                
+                // showSign only when negative: formatCurrency always shows abs(amount), so
+                // passing showSign: false unconditionally (as before) hid the sign entirely —
+                // a negative running balance (more expenses than income) displayed as a
+                // plain, ever-growing positive number, making expenses look like they
+                // increased "Money Collected" and income look like it decreased it.
+                Text(formatCurrency(totalCollected, showSign: totalCollected < 0, isIncome: false))
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundStyle(.white)
             }
-            .buttonStyle(.plain)
-            
+
             Spacer()
+
             Menu {
                 Button {
                     showingQuickAdd = true
@@ -209,11 +178,25 @@ struct TrackerView: View {
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(width: 44, height: 44)
-                    .background(Circle().fill(Color(red: 0.35, green: 0.66, blue: 0.86)))
+                    .background(Circle().fill(Color(red: 0.35, green: 0.72, blue: 0.78)))
             }
             .buttonStyle(.plain)
-            
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    /// Smooth multi-stop teal/green gradient — no diagonal stripe texture.
+    private var headerBackground: some View {
+        LinearGradient(
+            colors: [
+                Color(red: 0.11, green: 0.27, blue: 0.28),
+                Color(red: 0.20, green: 0.38, blue: 0.35),
+                Color(red: 0.32, green: 0.47, blue: 0.41),
+                Color(red: 0.44, green: 0.56, blue: 0.47)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
     }
     
     // MARK: - Transaction list
@@ -248,7 +231,7 @@ struct TrackerView: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 20)
+                .padding(.top, 8)
                 .padding(.bottom, 100)
                 
             }
@@ -288,9 +271,6 @@ struct TrackerView: View {
     private func monthSection(_ group: MonthGroup) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Image(systemName: "calendar")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Color(red: 0.18, green: 0.14, blue: 0.22))
                 Text(group.monthDate.formatted(.dateTime.month(.wide)))
                     .font(.system(size: 20, weight: .bold))
                 Spacer()
@@ -459,72 +439,6 @@ private struct SwipeableTransactionRow: View {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
             offset = 0
             isOpen = false
-        }
-    }
-}
-
-// MARK: - Month/Year picker sheet
-
-private struct MonthYearPickerSheet: View {
-    @Binding var selection: Date
-    @Environment(\.dismiss) private var dismiss
-    
-    @State private var month: Int
-    @State private var year: Int
-    
-    private let months = Calendar.current.monthSymbols
-    private let years: [Int] = Array(1900...10000)
-    
-    init(selection: Binding<Date>) {
-        _selection = selection
-        let calendar = Calendar.current
-        _month = State(initialValue: calendar.component(.month, from: selection.wrappedValue) - 1)
-        _year = State(initialValue: calendar.component(.year, from: selection.wrappedValue))
-    }
-    
-    var body: some View {
-        NavigationStack {
-            HStack(spacing: 0) {
-                Picker("Month", selection: $month) {
-                    ForEach(0..<months.count, id: \.self) { index in
-                        Text(months[index]).tag(index)
-                    }
-                }
-                .pickerStyle(.wheel)
-                
-                Picker("Year", selection: $year) {
-                    ForEach(years, id: \.self) { y in
-                        Text(String(y)).tag(y)
-                    }
-                }
-                .pickerStyle(.wheel)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color(.secondarySystemBackground))
-            )
-            .padding(.horizontal, 16)
-            .navigationTitle("Select Month")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        var components = DateComponents()
-                        components.year = year
-                        components.month = month + 1
-                        components.day = 1
-                        if let date = Calendar.current.date(from: components) {
-                            selection = date
-                        }
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-            }
         }
     }
 }

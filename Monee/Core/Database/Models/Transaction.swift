@@ -6,6 +6,11 @@
 //  Updated 02/07/26 — added `title` (fixes AIChatViewModel referencing a property that
 //  didn't exist), wired up `category` on the model (was defined but never used), added `source`.
 //
+//  Updated 10/07/26 — added `iconSystemName`/`tint` on TransactionCategory. DashboardView's
+//  donut chart + legend reference these (to color/icon each slice — Food/Household/
+//  Entertaiment/Other match the fixed icon+color set from the hi-fi), but the enum itself
+//  never defined them, which is what was throwing "has no member 'iconSystemName'/'tint'".
+//
 
 import Foundation
 import SwiftData
@@ -15,40 +20,36 @@ import SwiftUI
 
 enum TransactionCategory: String, Codable, CaseIterable {
     case income = "Income"
-    case software = "Software & Subscriptions"
-    case hardware = "Hardware & Equipment"
-    case marketing = "Marketing & Ads"
-    case travel = "Travel & Transport"
-    case meals = "Meals & Entertainment"
-    case office = "Office Supplies"
-    case transfer = "Bank Transfer"
-    case unassigned = "Unassigned"
+    case food = "Food"
+    case household = "Household"
+    case entertaiment = "Entertaiment"
+    case other = "Other"
+   
+}
 
-    var iconName: String {
+/// Icon + color per category, matching the fixed palette used in the Summary
+/// donut chart/legend (Food = teal fork & knife, Household = green house,
+/// Entertaiment = orange party popper, Other = coral ellipsis). `income`
+/// isn't shown in the expense legend but gets a sensible value in case the
+/// Income tab ever needs to color/icon it too.
+extension TransactionCategory {
+    var iconSystemName: String {
         switch self {
-        case .income: return "banknote.fill"
-        case .software: return "puzzlepiece.extension.fill"
-        case .hardware: return "desktopcomputer"
-        case .marketing: return "megaphone.fill"
-        case .travel: return "airplane"
-        case .meals: return "fork.knife"
-        case .office: return "printer.fill"
-        case .transfer: return "arrow.left.arrow.right.circle.fill"
-        case .unassigned: return "questionmark.circle.fill"
+        case .income: return "dollarsign.circle.fill"
+        case .food: return "fork.knife"
+        case .household: return "house.fill"
+        case .entertaiment: return "party.popper.fill"
+        case .other: return "ellipsis"
         }
     }
 
     var tint: Color {
         switch self {
-        case .income: return .green
-        case .software: return .indigo
-        case .hardware: return .gray
-        case .marketing: return .pink
-        case .travel: return .teal
-        case .meals: return .orange
-        case .office: return .brown
-        case .transfer: return .blue
-        case .unassigned: return .secondary
+        case .income: return Color(red: 0.45, green: 0.72, blue: 0.58)
+        case .food: return Color(red: 0.38, green: 0.72, blue: 0.82)
+        case .household: return Color(red: 0.58, green: 0.76, blue: 0.58)
+        case .entertaiment: return Color(red: 0.95, green: 0.68, blue: 0.38)
+        case .other: return Color(red: 0.82, green: 0.45, blue: 0.42)
         }
     }
 }
@@ -82,7 +83,8 @@ final class Transaction {
         title: String,
         amount: Double,
         date: Date = Date(),
-        category: TransactionCategory = .unassigned,
+        category: TransactionCategory = .other,
+//        category: TransactionCategory = .unassigned,
         source: TransactionSource = .manual,
         rawKeyword: String? = nil
     ) {

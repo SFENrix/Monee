@@ -16,14 +16,14 @@ import Combine
 final class QuickEntryViewModel: ObservableObject {
     @Published var title: String = ""
     @Published var amount: Double?
-    @Published var category: TransactionCategory = .unassigned
+    @Published var category: TransactionCategory = .other
     @Published var date: Date = .now
     @Published var validationError: String?
 
     /// Drives the Income/Expense segmented control. Setting this reassigns `category`
     /// so the two can never disagree — no separate "type" field needed.
     @Published var isIncome: Bool = false {
-        didSet { category = isIncome ? .income : .unassigned }
+        didSet { category = isIncome ? .income : .other }
     }
 
     /// Defaults to manual entry; ReceiptConfirmationView sets this to `.ocr` after prefilling.
@@ -105,7 +105,7 @@ final class QuickEntryViewModel: ObservableObject {
     func reset() {
         title = ""
         amount = nil
-        category = .unassigned
+        category = .other
         date = .now
         validationError = nil
         source = .manual

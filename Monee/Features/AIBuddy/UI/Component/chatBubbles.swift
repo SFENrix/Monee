@@ -60,7 +60,8 @@ struct ChatBubble: View {
     
     struct AppIconAvatar: View {
         var body: some View {
-            Image("Monee")
+            Image("buntel")
+                .renderingMode(.original)
                 .resizable()
                 .scaledToFill()
                 .frame(width: 36, height: 36)
@@ -77,4 +78,25 @@ struct ChatBubble: View {
                 )
         }
     }
+}
+
+#Preview {
+    VStack(spacing: 0) {
+        ChatBubble(message: MessageText(
+            sender: .assistant,
+            text: "Hey! I noticed you've spent a bit more on food this month — want me to break it down by week?"
+        ))
+
+        ChatBubble(message: MessageText(
+            sender: .user,
+            text: "Yeah, show me the weekly breakdown please"
+        ))
+
+        ChatBubble(message: MessageText(
+            sender: .assistant,
+            text: "Sure thing 👍"
+        ))
+    }
+    .padding(.vertical, 12)
+    .background(Color(.systemGroupedBackground))
 }

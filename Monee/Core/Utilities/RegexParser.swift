@@ -136,13 +136,13 @@ enum RegexParser {
     // MARK: - Keyword / Category Parsing
 
     private static let categoryKeywordMap: [TransactionCategory: [String]] = [
-        .software: ["subscription", "saas", "adobe", "figma", "notion", "github", "openai", "app store"],
-        .hardware: ["apple store", "best buy", "laptop", "monitor", "keyboard", "electronics"],
-        .marketing: ["ads", "facebook ads", "google ads", "boost", "sponsor", "promotion"],
-        .travel: ["uber", "grab", "gojek", "taxi", "airlines", "hotel", "flight", "airbnb"],
-        .meals: ["restaurant", "cafe", "coffee", "starbucks", "mcdonald", "food", "grabfood", "gofood"],
-        .office: ["office", "stationery", "staples", "supplies", "print"],
-        .transfer: ["transfer", "bi-fast", "rtgs", "skn", "bca", "blu", "gopay", "ovo", "dana", "bank"]
+        .other: ["subscription", "saas", "adobe", "figma", "notion", "github", "openai", "app store"],
+        .other: ["apple store", "best buy", "laptop", "monitor", "keyboard", "electronics"],
+        .other: ["ads", "facebook ads", "google ads", "boost", "sponsor", "promotion"],
+        .other: ["uber", "grab", "gojek", "taxi", "airlines", "hotel", "flight", "airbnb"],
+        .food: ["restaurant", "cafe", "coffee", "starbucks", "mcdonald", "food", "grabfood", "gofood"],
+//        .office: ["office", "stationery", "staples", "supplies", "print"],
+//        .transfer: ["transfer", "bi-fast", "rtgs", "skn", "bca", "blu", "gopay", "ovo", "dana", "bank"]
     ]
 
     static func parseKeyword(from text: String) -> (keyword: String?, category: TransactionCategory) {
@@ -154,7 +154,7 @@ enum RegexParser {
                 }
             }
         }
-        return (nil, .unassigned)
+        return (nil, .other)
     }
 
     // MARK: - Direction (Income vs. Expense)
@@ -185,6 +185,6 @@ enum RegexParser {
             }
         }
 
-        return category == .unassigned ? "Receipt" : category.rawValue
+        return category == .other ? "Receipt" : category.rawValue
     }
 }

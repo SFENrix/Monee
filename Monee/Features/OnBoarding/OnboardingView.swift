@@ -23,6 +23,13 @@
 //  into TrackerView's displayed balance and CashReserveCalculator's Spare
 //  Money as its own explicit term instead.
 //
+//  Updated 10/07/26 — "Get Started" now goes straight to
+//  OnboardingFinancialSetupView, skipping OnboardingSetupView (name/status)
+//  entirely. finishOnboarding still takes name/status params (unchanged, in
+//  case that step comes back), so the fullScreenCover closure just calls it
+//  with name: "" and status: nil for now — UserProfile.name/.status simply
+//  won't get set via onboarding until that step is reinstated or replaced.
+//
 
 import SwiftUI
 import SwiftData
@@ -75,7 +82,15 @@ struct OnboardingView: View {
             .ignoresSafeArea(edges: .bottom)
         }
         .fullScreenCover(isPresented: $showingSetup) {
-            OnboardingSetupView(onFinish: finishOnboarding)
+            OnboardingFinancialSetupView(onFinish: { totalMoney, monthlyIncome, monthlyExpense in
+                finishOnboarding(
+                    name: "",
+                    status: nil,
+                    totalMoney: totalMoney,
+                    monthlyIncome: monthlyIncome,
+                    monthlyExpense: monthlyExpense
+                )
+            })
         }
     }
 
@@ -151,9 +166,11 @@ struct OnboardingView: View {
 
     // MARK: - Completion
 
-    /// Called once OnboardingFinancialSetupView (the last of the three chained
-    /// screens) finishes. Persists everything collected across the whole chain
-    /// and flips the flags that dismiss the fullScreenCover in RootTabView.
+    /// Called once OnboardingFinancialSetupView (now the only step in the chain)
+    /// finishes. Persists everything collected and flips the flags that dismiss
+    /// the fullScreenCover in RootTabView. name/status params are kept (both nil/
+    /// empty from the caller for now) so this doesn't need to change shape again
+    /// if a name/status step is reinstated later.
     private func finishOnboarding(
         name: String,
         status: OnboardingStatus?,
