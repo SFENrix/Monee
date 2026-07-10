@@ -13,6 +13,11 @@
 //  it's presented as a fullScreenCover with no prior onboarding step to return
 //  to, a back button here had nowhere meaningful to go.
 //
+//  Updated 10/07/26 — onboarding is now mandatory: "Finish" is disabled until all
+//  three fields parse to a valid non-negative number, so the flow can't be
+//  dismissed with blank/garbage data. (A DEBUG-only skip exists on OnboardingView's
+//  welcome screen for testing.)
+//
 
 import SwiftUI
 
@@ -34,6 +39,16 @@ struct OnboardingFinancialSetupView: View {
 
     private enum Field {
         case totalMoney, monthlyIncome, monthlyExpense
+    }
+
+    /// All three fields must parse to a valid, non-negative number — an empty
+    /// or non-numeric field keeps "Finish" disabled so onboarding can't be
+    /// completed with missing data.
+    private var isFormValid: Bool {
+        [totalMoneyText, monthlyIncomeText, monthlyExpenseText].allSatisfy { text in
+            guard let value = Double(text) else { return false }
+            return value >= 0
+        }
     }
 
     var body: some View {
@@ -137,18 +152,23 @@ struct OnboardingFinancialSetupView: View {
                     .background(
                         Capsule()
                             .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color(red: 0.38, green: 0.78, blue: 0.80),
-                                        Color(red: 0.30, green: 0.68, blue: 0.72)
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
+                                isFormValid
+                                    ? AnyShapeStyle(
+                                        LinearGradient(
+                                            colors: [
+                                                Color(red: 0.38, green: 0.78, blue: 0.80),
+                                                Color(red: 0.30, green: 0.68, blue: 0.72)
+                                            ],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    : AnyShapeStyle(Color(.systemGray4))
                             )
                     )
             }
             .buttonStyle(.plain)
+            .disabled(!isFormValid)
             .padding(.bottom, 24)
         }
         .padding(.horizontal, 24)
