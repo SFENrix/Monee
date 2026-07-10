@@ -65,8 +65,8 @@ struct RootTabView: View {
                 DashboardView()
             }
 
-            Tab("Profile", systemImage: "person.fill", value: AppTab.profile) {
-                ProfileView()
+            Tab("Savings", systemImage: "dollarsign.circle.fill", value: AppTab.profile) {
+                SavingsView()
             }
 
 //            Tab(value: AppTab.aiChat, role: .search) {

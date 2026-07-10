@@ -26,6 +26,14 @@
 //  as its own term). Instead TrackerView reads UserProfile.emergencyFundTotal
 //  directly and nets it out of the running balance — see TrackerView.totalCollected.
 //
+//  Updated 10/07/26 — Emergency Fund now has its own dedicated screen (SavingsView,
+//  the "Savings" tab), so it's been removed entirely from this Summary screen —
+//  emergencyFundHeader, the add/withdraw sheets, and their state are all gone.
+//  In its place, the Expense/Income segmented control moved up to sit where the
+//  emergency fund header used to be (straddling the teal/cream boundary), and the
+//  month selector — previously above the picker — now sits below it, at the top
+//  of the cream card, matching the new hi-fi.
+//
 
 import SwiftUI
 import SwiftData
@@ -34,17 +42,19 @@ import Charts
 struct DashboardView: View {
     @Query(sort: \Transaction.date, order: .reverse) private var transactions: [Transaction]
 
-    @State private var emergencyFundCurrent: Double = UserProfile.emergencyFundTotal
     @State private var selectedKind: Kind = .expense
     @State private var selectedMonth: Date = Date()
-    @State private var showingAddFund = false
-    @State private var showingWithdrawFund = false
+
+    @State private var showingAverageInfo = false
 
     private enum Kind { case expense, income }
 
     var body: some View {
         VStack(spacing: 0) {
-            emergencyFundHeader
+            kindPicker
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 20)
 
             ScrollView {
                 summaryCard
@@ -52,116 +62,13 @@ struct DashboardView: View {
             .background(Color(red: 0.98, green: 0.96, blue: 0.92))
         }
         .background(headerGradient.ignoresSafeArea(edges: .top))
-        .sheet(isPresented: $showingAddFund) {
-            AddEmergencyFundSheet(mode: .add, currentTotal: emergencyFundCurrent) { amountAdded, _ in
-                let newTotal = emergencyFundCurrent + amountAdded
-                UserProfile.emergencyFundTotal = newTotal
-                emergencyFundCurrent = newTotal
-            }
-        }
-        .sheet(isPresented: $showingWithdrawFund) {
-            AddEmergencyFundSheet(mode: .withdraw, currentTotal: emergencyFundCurrent) { amountWithdrawn, _ in
-                // Clamped defensively — the sheet already disables Done above the
-                // available total, this just guards against it going negative.
-                let newTotal = max(0, emergencyFundCurrent - amountWithdrawn)
-                UserProfile.emergencyFundTotal = newTotal
-                emergencyFundCurrent = newTotal
-            }
-        }
-        .onAppear {
-            // UserProfile is a plain UserDefaults store, not @Observable — re-sync
-            // in case it changed elsewhere (e.g. Profile) since this view last appeared.
-            emergencyFundCurrent = UserProfile.emergencyFundTotal
-        }
-    }
-
-    // MARK: - Emergency fund header
-
-    private var emergencyFundHeader: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Emergency Savings")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(.white)
-
-            HStack(spacing: 12) {
-                if let target = UserProfile.emergencyFundTarget {
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule()
-                                .fill(Color.white.opacity(0.25))
-
-                            Capsule()
-                                .fill(
-                                    LinearGradient(
-                                        colors: [
-                                            Color(red: 0.96, green: 0.75, blue: 0.45),
-                                            Color(red: 0.95, green: 0.65, blue: 0.35)
-                                        ],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .frame(width: geo.size.width * progressFraction(target: target))
-
-                            Text("\(emergencyFundCurrent.idrFormatted) / \(target.idrFormatted)")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(.black.opacity(0.75))
-                                .padding(.leading, 14)
-                        }
-                    }
-                    .frame(height: 32)
-                } else {
-                    Text("Set an Estimated Monthly Expense in Profile to calculate a target.")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .frame(height: 32)
-                }
-
-                Button {
-                    showingWithdrawFund = true
-                } label: {
-                    Image(systemName: "minus")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(Color.white.opacity(0.25)))
-                }
-                .buttonStyle(.plain)
-                .disabled(emergencyFundCurrent <= 0)
-                .opacity(emergencyFundCurrent <= 0 ? 0.5 : 1)
-
-                Button {
-                    showingAddFund = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(Color(red: 0.35, green: 0.72, blue: 0.78)))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 20)
-        // Pulled up close to the safe area — was 60pt, now sits right under
-        // the status bar/notch instead of floating in the middle of the
-        // teal strip.
-        .padding(.top, 12)
-        .padding(.bottom, 24)
-    }
-
-    private func progressFraction(target: Double) -> CGFloat {
-        guard target > 0 else { return 0 }
-        return min(CGFloat(emergencyFundCurrent / target), 1)
     }
 
     // MARK: - Summary card
 
     private var summaryCard: some View {
         VStack(spacing: 20) {
-            monthSelector
-
-            kindPicker
+            summaryHeaderRow
 
             donutChart
 
@@ -170,34 +77,94 @@ struct DashboardView: View {
         .padding(.horizontal, 20)
         .padding(.top, 24)
         .padding(.bottom, 32)
+        
     }
 
-    private var monthSelector: some View {
-        HStack {
-            Spacer()
-            Menu {
-                ForEach(lastTwelveMonths, id: \.self) { month in
-                    Button(monthYearString(month)) { selectedMonth = month }
+    /// Average expense/income sits on its own row, with the month pill on a
+    /// separate row below (right-aligned) — matches the hi-fi where these are
+    /// stacked rather than side by side.
+    private var summaryHeaderRow: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 4) {
+                    Text(selectedKind == .expense ? "Average Expense" : "Average Income")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+
+                    Button {
+                        showingAverageInfo = true
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showingAverageInfo, arrowEdge: .top) {
+                        averageInfoBubble
+                            .presentationCompactAdaptation(.popover)
+                    }
                 }
-            } label: {
-                Text(monthYearString(selectedMonth))
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Capsule().fill(Color(.systemGray5)))
+
+                if let average = averagePerDay {
+                    Text(average.idrFormatted)
+                        .font(.system(size: 26, weight: .bold))
+                } else {
+                    Text("No data yet")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            HStack {
+                Spacer()
+                monthPill
             }
         }
     }
 
+    private var monthPill: some View {
+        Menu {
+            ForEach(lastTwelveMonths, id: \.self) { month in
+                Button(monthYearString(month)) { selectedMonth = month }
+            }
+        } label: {
+            Text(monthYearString(selectedMonth))
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Capsule().fill(Color(.systemGray5)))
+        }
+    }
+
+    /// Average \(selectedKind) per day, over the days in the selected month that
+    /// actually have a logged transaction of that kind — nil (→ placeholder)
+    /// rather than 0 when there's nothing logged yet, so an empty month doesn't
+    /// masquerade as "you averaged Rp0."
+    private var averagePerDay: Double? {
+        guard !filteredTransactions.isEmpty else { return nil }
+        let calendar = Calendar.current
+        let distinctDays = Set(filteredTransactions.map { calendar.startOfDay(for: $0.date) })
+        guard !distinctDays.isEmpty else { return nil }
+        return total / Double(distinctDays.count)
+    }
+
     /// Apple HIG segmented control — the standard way to switch between two
-    /// mutually-exclusive views like Expense/Income.
+    /// mutually-exclusive views like Expense/Income. Moved up to sit where the
+    /// emergency fund header used to be, straddling the teal/cream boundary.
+    /// The segmented control's native track is translucent, so sitting directly
+    /// on the teal gradient was letting it bleed through as a greenish tint —
+    /// an explicit gray Capsule behind it keeps the track a consistent gray
+    /// regardless of what's underneath.
     private var kindPicker: some View {
         Picker("Summary type", selection: $selectedKind) {
             Text("Expense").tag(Kind.expense)
             Text("Income").tag(Kind.income)
         }
         .pickerStyle(.segmented)
+        .background(
+            Capsule().fill(Color(.systemGray4))
+        )
     }
 
     private var donutChart: some View {
@@ -213,7 +180,7 @@ struct DashboardView: View {
                         innerRadius: .ratio(0.62),
                         angularInset: 1.5
                     )
-//                    .foregroundStyle(item)
+                    .foregroundStyle(item.color)
                     .cornerRadius(2)
                 }
                 .frame(height: 260)
@@ -242,11 +209,11 @@ struct DashboardView: View {
 
             ForEach(categoryTotals) { item in
                 HStack(spacing: 12) {
-//                    Image(systemName: item.iconSystemName)
-//                        .font(.system(size: 14))
-//                        .foregroundStyle(.white)
-//                        .frame(width: 32, height: 32)
-//                        .background(Circle().fill(item.color))
+                    Image(systemName: item.iconSystemName)
+                        .font(.system(size: 14))
+                        .foregroundStyle(.white)
+                        .frame(width: 32, height: 32)
+                        .background(Circle().fill(item.color))
 
                     Text(item.label)
                         .font(.system(size: 16))
@@ -267,13 +234,31 @@ struct DashboardView: View {
         .padding(.top, 8)
     }
 
+    /// Content of the tooltip popover — bolds "3 months" to match the hi-fi.
+    /// NOTE: "3 months" is currently just copy, not a computed window — this
+    /// screen still averages per-day within the single selected month
+    /// (`averagePerDay`). If you want the average itself to actually be a
+    /// rolling 3-month figure, that's a separate change to that calculation.
+    private var averageInfoBubble: some View {
+        (
+            Text("Based on your average spending over the last ")
+                + Text("3 months").fontWeight(.bold)
+        )
+        .font(.system(size: 15))
+        .foregroundStyle(.primary)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .frame(maxWidth: 280)
+    }
+
     // MARK: - Data
 
     private struct CategoryTotal: Identifiable {
         let id: String
         let label: String
-//        let iconSystemName: String
-//        let color: Color
+        let iconSystemName: String
+        let color: Color
         let amount: Double
     }
 
@@ -296,8 +281,8 @@ struct DashboardView: View {
             CategoryTotal(
                 id: category.rawValue,
                 label: category.rawValue,
-//                iconSystemName: category.,
-//                color: category.tint,
+                iconSystemName: category.iconSystemName,
+                color: category.tint,
                 amount: items.reduce(0) { $0 + $1.amount }
             )
         }
@@ -321,131 +306,19 @@ struct DashboardView: View {
         return formatter.string(from: date)
     }
 
+    /// Same teal/green gradient as TrackerView's header, for visual consistency
+    /// across tabs (was a lighter, differently-toned peach/mint diagonal before).
     private var headerGradient: LinearGradient {
         LinearGradient(
             colors: [
-                Color(red: 0.55, green: 0.72, blue: 0.68),
-                Color(red: 0.92, green: 0.78, blue: 0.62)
+                Color(red: 0.11, green: 0.27, blue: 0.28),
+                Color(red: 0.20, green: 0.38, blue: 0.35),
+                Color(red: 0.32, green: 0.47, blue: 0.41),
+                Color(red: 0.44, green: 0.56, blue: 0.47)
             ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
+            startPoint: .top,
+            endPoint: .bottom
         )
-    }
-}
-
-// MARK: - Add/Withdraw Emergency Savings sheet
-
-private struct AddEmergencyFundSheet: View {
-    enum Mode {
-        case add
-        case withdraw
-
-        var title: String {
-            switch self {
-            case .add: return "Add Emergency Savings"
-            case .withdraw: return "Withdraw from Savings"
-            }
-        }
-
-        var accentColor: Color {
-            switch self {
-            case .add: return Color(red: 0.35, green: 0.72, blue: 0.78)
-            case .withdraw: return Color(red: 0.85, green: 0.45, blue: 0.40)
-            }
-        }
-    }
-
-    let mode: Mode
-    /// Only enforced for `.withdraw` — can't take out more than is actually in the
-    /// fund. Unused for `.add`, which has no upper bound.
-    let currentTotal: Double
-    /// (amount, date) — always positive; DashboardView applies the sign based on `mode`.
-    var onDone: (Double, Date) -> Void
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var amountText = ""
-    @State private var date = Date()
-
-    private var enteredAmount: Double? {
-        guard let value = Double(amountText), value > 0 else { return nil }
-        if mode == .withdraw, value > currentTotal { return nil }
-        return value
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                Text(mode.title)
-                    .font(.system(size: 17, weight: .bold))
-
-                Spacer()
-
-                Button("Done") {
-                    if let amount = enteredAmount {
-                        onDone(amount, date)
-                    }
-                    dismiss()
-                }
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Capsule().fill(mode.accentColor))
-                .disabled(enteredAmount == nil)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-            .padding(.bottom, 16)
-
-            Divider()
-
-            VStack(spacing: 0) {
-                HStack {
-                    Text("Total")
-                        .font(.system(size: 16))
-                    Spacer()
-
-                    TextField("IDR", text: $amountText)
-                        .keyboardType(.numberPad)
-                        .multilineTextAlignment(.trailing)
-                        .font(.system(size: 16))
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-
-                Divider().padding(.leading, 20)
-
-                HStack {
-                    Text("Date")
-                        .font(.system(size: 16))
-                    Spacer()
-                    DatePicker("", selection: $date, displayedComponents: .date)
-                        .labelsHidden()
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-            }
-
-            if mode == .withdraw {
-                Text("Up to \(currentTotal.idrFormatted) available")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 4)
-            }
-        }
-        .dismissKeyboardOnTap()
-        .presentationDetents([.height(mode == .withdraw ? 250 : 220)])
     }
 }
 

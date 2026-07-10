@@ -81,51 +81,51 @@ struct OnboardingSetupView: View {
                         .focused($nameFieldFocused)
                 }
 
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isStatusExpanded.toggle()
-                    }
-                } label: {
-                    fieldCard(
-                        label: "Status",
-                        trailingSystemImage: isStatusExpanded ? "chevron.up" : "chevron.down"
-                    ) {
-                        Text(status?.rawValue ?? "Select status")
-                            .font(.system(size: 16))
-                            .foregroundStyle(status == nil ? .secondary : .primary)
-                    }
-                }
-                .buttonStyle(.plain)
-
-                if isStatusExpanded {
-                    VStack(spacing: 0) {
-                        ForEach(OnboardingStatus.allCases) { option in
-                            Button {
-                                status = option
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    isStatusExpanded = false
-                                }
-                            } label: {
-                                Text(option.rawValue)
-                                    .font(.system(size: 16))
-                                    .foregroundStyle(.primary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.horizontal, 18)
-                                    .padding(.vertical, 14)
-                            }
-                            .buttonStyle(.plain)
-
-                            if option != OnboardingStatus.allCases.last {
-                                Divider().padding(.leading, 18)
-                            }
-                        }
-                    }
-                    .background(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(Color(.systemGray6).opacity(0.6))
-                    )
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                }
+//                Button {
+//                    withAnimation(.easeInOut(duration: 0.2)) {
+//                        isStatusExpanded.toggle()
+//                    }
+//                } label: {
+//                    fieldCard(
+//                        label: "Status",
+//                        trailingSystemImage: isStatusExpanded ? "chevron.up" : "chevron.down"
+//                    ) {
+//                        Text(status?.rawValue ?? "Select status")
+//                            .font(.system(size: 16))
+//                            .foregroundStyle(status == nil ? .secondary : .primary)
+//                    }
+//                }
+//                .buttonStyle(.plain)
+//
+//                if isStatusExpanded {
+//                    VStack(spacing: 0) {
+//                        ForEach(OnboardingStatus.allCases) { option in
+//                            Button {
+//                                status = option
+//                                withAnimation(.easeInOut(duration: 0.2)) {
+//                                    isStatusExpanded = false
+//                                }
+//                            } label: {
+//                                Text(option.rawValue)
+//                                    .font(.system(size: 16))
+//                                    .foregroundStyle(.primary)
+//                                    .frame(maxWidth: .infinity, alignment: .leading)
+//                                    .padding(.horizontal, 18)
+//                                    .padding(.vertical, 14)
+//                            }
+//                            .buttonStyle(.plain)
+//
+//                            if option != OnboardingStatus.allCases.last {
+//                                Divider().padding(.leading, 18)
+//                            }
+//                        }
+//                    }
+//                    .background(
+//                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+//                            .fill(Color(.systemGray6).opacity(0.6))
+//                    )
+//                    .transition(.opacity.combined(with: .move(edge: .top)))
+//                }
             }
 
             Spacer(minLength: 0)
