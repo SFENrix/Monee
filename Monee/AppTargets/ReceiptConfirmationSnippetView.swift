@@ -68,7 +68,7 @@ struct ReceiptConfirmationSnippetView: View {
                             categoryRawValue: expenseCategory.rawValue,
                             rawKeyword: rawKeyword
                         )) {
-                            Label(expenseCategory.rawValue, systemImage: expenseCategory.iconName)
+                            Label(expenseCategory.rawValue, systemImage: expenseCategory.iconSystemName)
                                 .frame(maxWidth: .infinity)
                         }
                     }

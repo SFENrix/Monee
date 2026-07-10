@@ -48,7 +48,7 @@ struct ShareConfirmationView: View {
                         Button {
                             onConfirm(category)
                         } label: {
-                            Label(category.rawValue, systemImage: category.iconName)
+                            Label(category.rawValue, systemImage: category.iconSystemName)
                         }
                     }
                 } label: {

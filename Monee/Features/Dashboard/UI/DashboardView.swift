@@ -46,6 +46,7 @@ struct DashboardView: View {
     @State private var selectedMonth: Date = Date()
 
     @State private var showingAverageInfo = false
+    @State private var showingMonthPicker = false
 
     private enum Kind { case expense, income }
 
@@ -62,6 +63,11 @@ struct DashboardView: View {
             .background(Color(red: 0.98, green: 0.96, blue: 0.92))
         }
         .background(headerGradient.ignoresSafeArea(edges: .top))
+        .sheet(isPresented: $showingMonthPicker) {
+            MonthYearPickerSheet(selection: $selectedMonth)
+                .presentationDetents([.height(280)])
+                .presentationCornerRadius(28)
+        }
     }
 
     // MARK: - Summary card
@@ -123,10 +129,8 @@ struct DashboardView: View {
     }
 
     private var monthPill: some View {
-        Menu {
-            ForEach(lastTwelveMonths, id: \.self) { month in
-                Button(monthYearString(month)) { selectedMonth = month }
-            }
+        Button {
+            showingMonthPicker = true
         } label: {
             Text(monthYearString(selectedMonth))
                 .font(.system(size: 14, weight: .medium))
@@ -135,6 +139,7 @@ struct DashboardView: View {
                 .padding(.vertical, 8)
                 .background(Capsule().fill(Color(.systemGray5)))
         }
+        .buttonStyle(.plain)
     }
 
     /// Average \(selectedKind) per day, over the days in the selected month that
@@ -293,13 +298,6 @@ struct DashboardView: View {
         filteredTransactions.reduce(0) { $0 + $1.amount }
     }
 
-    private var lastTwelveMonths: [Date] {
-        let calendar = Calendar.current
-        return (0..<12).compactMap {
-            calendar.date(byAdding: .month, value: -$0, to: Date())
-        }
-    }
-
     private func monthYearString(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM, yyyy"
@@ -319,6 +317,72 @@ struct DashboardView: View {
             startPoint: .top,
             endPoint: .bottom
         )
+    }
+}
+
+// MARK: - Month/Year picker sheet
+
+private struct MonthYearPickerSheet: View {
+    @Binding var selection: Date
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var month: Int
+    @State private var year: Int
+
+    private let months = Calendar.current.monthSymbols
+    private let years: [Int] = Array(1900...2100)
+
+    init(selection: Binding<Date>) {
+        _selection = selection
+        let calendar = Calendar.current
+        _month = State(initialValue: calendar.component(.month, from: selection.wrappedValue) - 1)
+        _year = State(initialValue: calendar.component(.year, from: selection.wrappedValue))
+    }
+
+    var body: some View {
+        NavigationStack {
+            HStack(spacing: 0) {
+                Picker("Month", selection: $month) {
+                    ForEach(0..<months.count, id: \.self) { index in
+                        Text(months[index]).tag(index)
+                    }
+                }
+                .pickerStyle(.wheel)
+
+                Picker("Year", selection: $year) {
+                    ForEach(years, id: \.self) { y in
+                        Text(String(y)).tag(y)
+                    }
+                }
+                .pickerStyle(.wheel)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color(.secondarySystemBackground))
+            )
+            .padding(.horizontal, 16)
+            .navigationTitle("Select Month")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        var components = DateComponents()
+                        components.year = year
+                        components.month = month + 1
+                        components.day = 1
+                        if let date = Calendar.current.date(from: components) {
+                            selection = date
+                        }
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
     }
 }
 

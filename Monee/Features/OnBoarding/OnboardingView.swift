@@ -30,9 +30,17 @@
 //  with name: "" and status: nil for now — UserProfile.name/.status simply
 //  won't get set via onboarding until that step is reinstated or replaced.
 //
+//  Updated 10/07/26 — onboarding is now mandatory (OnboardingFinancialSetupView
+//  won't let "Finish" through until every field is filled with a valid number),
+//  so this screen gained a DEBUG-only "Skip Onboarding" control for testing —
+//  flip `debugSkipOnboardingEnabled` to false to hide it without deleting it.
+//
 
 import SwiftUI
 import SwiftData
+
+/// Set to `false` to hide the DEBUG-only skip button below without deleting it.
+private let debugSkipOnboardingEnabled = true
 
 struct OnboardingView: View {
     @Environment(AppContainer.self) private var appContainer
@@ -92,6 +100,25 @@ struct OnboardingView: View {
                 )
             })
         }
+        #if DEBUG
+        .overlay(alignment: .topTrailing) {
+            if debugSkipOnboardingEnabled {
+                Button {
+                    finishOnboarding(name: "", status: nil, totalMoney: 0, monthlyIncome: 0, monthlyExpense: 0)
+                } label: {
+                    Text("Skip (DEBUG)")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(Color.red.opacity(0.85)))
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 20)
+                .padding(.top, 8)
+            }
+        }
+        #endif
     }
 
     // MARK: - Bottom sheet

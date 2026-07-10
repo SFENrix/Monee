@@ -217,11 +217,12 @@ struct SavingsView: View {
                 Text("\(formatRupiah(remaining)) left to save to reach your goal!")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color(red: 0.90, green: 0.55, blue: 0.25))
-            } else {
-                Text("Set an estimated monthly expense in Profile to calculate your goal.")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
             }
+//            else {
+//                Text("Set an estimated monthly expense in Profile to calculate your goal.")
+//                    .font(.system(size: 14))
+//                    .foregroundStyle(.secondary)
+//            }
         }
         .padding(20)
         .background(

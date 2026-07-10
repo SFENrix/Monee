@@ -23,12 +23,21 @@
 //  swapped its icon from a plain "plus" to "square.and.pencil" (a compose glyph reads
 //  more clearly as "start a new chat" than a generic plus).
 //
+//  Updated 10/07/26 — relocated the DEBUG-only "Reset App" control here from the now-
+//  removed ProfileView (Profile was replaced by the Savings tab, which has no natural
+//  home for a testing control). Flip `debugResetControlEnabled` to false to hide it
+//  without removing the code.
+//
 
 import SwiftUI
 import SwiftData
 
+/// Set to `false` to hide the DEBUG-only reset button below without deleting it.
+private let debugResetControlEnabled = true
+
 struct AIChatView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(AppContainer.self) private var appContainer
     @StateObject private var viewModel = AIChatViewModel()
     @Query(sort: \ChatSession.updatedAt, order: .reverse) private var sessions: [ChatSession]
 
@@ -36,6 +45,9 @@ struct AIChatView: View {
 
     @State private var draft: String = ""
     @State private var showingHistory = false
+    #if DEBUG
+    @State private var showingResetConfirmation = false
+    #endif
 
     var body: some View {
         ZStack {
@@ -81,6 +93,31 @@ struct AIChatView: View {
                 .padding(.top, 8)
             }
         }
+        #if DEBUG
+        .overlay(alignment: .bottomTrailing) {
+            if debugResetControlEnabled {
+                Button {
+                    showingResetConfirmation = true
+                } label: {
+                    Image(systemName: "ladybug.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 32, height: 32)
+                        .background(Circle().fill(Color.red.opacity(0.85)))
+                        .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 16)
+                .padding(.bottom, 90)
+            }
+        }
+        .alert("Reset App?", isPresented: $showingResetConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Reset", role: .destructive) { resetAppForTesting() }
+        } message: {
+            Text("This wipes all transactions, chats, and onboarding data, and restarts onboarding. Testing only.")
+        }
+        #endif
         .sheet(isPresented: $showingHistory) {
             ChatHistoryListView(sessions: sessions) { session in
                 viewModel.loadSession(session, modelContext: modelContext)
@@ -91,6 +128,23 @@ struct AIChatView: View {
             viewModel.bootstrap(modelContext: modelContext)
         }
     }
+
+    #if DEBUG
+    /// Wipes UserDefaults (UserProfile) and every SwiftData record, then flips
+    /// AppContainer.isUserOnboarded so the onboarding fullScreenCover reappears
+    /// immediately in this session — no force-quit/relaunch needed, though it
+    /// behaves identically to a fresh install either way.
+    private func resetAppForTesting() {
+        try? modelContext.delete(model: Transaction.self)
+        try? modelContext.delete(model: ChatSession.self)
+        try? modelContext.delete(model: ChatMessage.self)
+        try? modelContext.save()
+
+        UserProfile.resetAll()
+
+        appContainer.isUserOnboarded = false
+    }
+    #endif
 
     // MARK: - Button
 
