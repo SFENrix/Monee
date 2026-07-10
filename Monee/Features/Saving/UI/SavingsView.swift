@@ -239,12 +239,18 @@ struct SavingsView: View {
         switch progressFraction {
         case ..<0.01:
             return ("Let's get started!", "Every little bit counts — add your first contribution whenever you're ready.")
-        case ..<0.5:
+        case ..<0.3:
             return ("Keep going!", "You're doing great! Stay consistent and reach your goal sooner.")
+        case ..<0.5:
+            return ("Gaining momentum!", "You’ve built a solid foundation. Keep that streak alive!")
+        case ..<0.75:
+            return ("Halfway there!", "You’ve crossed the halfway mark! Keep pushing.")
+        case ..<0.9:
+            return ("The home stretch!", "You are so close! Your emergency fund is looking incredibly strong.")
         case ..<1.0:
-            return ("Almost there!", "You're over halfway — a few more contributions and you'll hit your goal.")
+            return ("Almost perfect!", "Just one final push! You can practically taste the financial peace of mind.")
         default:
-            return ("Goal reached! 🎉", "Your emergency fund is fully stocked. Nice work staying consistent.")
+            return ("Goal reached! 🎉", "Incredible job! You’ve fully funded your goal and secured your safety net.")
         }
     }
 
