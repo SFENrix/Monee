@@ -135,14 +135,27 @@ enum RegexParser {
 
     // MARK: - Keyword / Category Parsing
 
+    // NOTE: TransactionCategory was collapsed from 8 cases down to Food/Household/
+    // Entertaiment/Other. The old per-topic keyword lists (subscriptions, electronics,
+    // ads, travel) all fold into `.other` now — a dictionary literal can't repeat a key,
+    // which is what was crashing both the Share Extension and the Shortcut/Action Button
+    // the instant this map was first touched ("Dictionary literal contains duplicate keys").
     private static let categoryKeywordMap: [TransactionCategory: [String]] = [
-        .other: ["subscription", "saas", "adobe", "figma", "notion", "github", "openai", "app store"],
-        .other: ["apple store", "best buy", "laptop", "monitor", "keyboard", "electronics"],
-        .other: ["ads", "facebook ads", "google ads", "boost", "sponsor", "promotion"],
-        .other: ["uber", "grab", "gojek", "taxi", "airlines", "hotel", "flight", "airbnb"],
+        .other: [
+            "subscription", "saas", "adobe", "figma", "notion", "github", "openai", "app store",
+            "apple store", "best buy", "laptop", "monitor", "keyboard", "electronics",
+            "ads", "facebook ads", "google ads", "boost", "sponsor", "promotion",
+            "uber", "grab", "gojek", "taxi", "airlines", "hotel", "flight", "airbnb"
+        ],
         .food: ["restaurant", "cafe", "coffee", "starbucks", "mcdonald", "food", "grabfood", "gofood"],
-//        .office: ["office", "stationery", "staples", "supplies", "print"],
-//        .transfer: ["transfer", "bi-fast", "rtgs", "skn", "bca", "blu", "gopay", "ovo", "dana", "bank"]
+        .household: [
+            "supermarket", "grocery", "groceries", "indomaret", "alfamart", "hypermart", "carrefour",
+            "electricity", "pln", "water bill", "pdam", "rent", "furniture", "ikea", "detergent", "household"
+        ],
+        .entertaiment: [
+            "movie", "cinema", "netflix", "spotify", "disney", "concert", "game", "steam",
+            "playstation", "xbox", "karaoke", "bar", "club", "entertainment"
+        ],
     ]
 
     static func parseKeyword(from text: String) -> (keyword: String?, category: TransactionCategory) {

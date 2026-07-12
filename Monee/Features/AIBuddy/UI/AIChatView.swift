@@ -45,9 +45,10 @@ struct AIChatView: View {
 
     @State private var draft: String = ""
     @State private var showingHistory = false
-    #if DEBUG
-    @State private var showingResetConfirmation = false
-    #endif
+#if DEBUG
+@State private var showingResetConfirmation = false
+@State private var showingSeedConfirmation = false
+#endif
 
     var body: some View {
         ZStack {
@@ -97,6 +98,20 @@ struct AIChatView: View {
         .overlay(alignment: .bottomTrailing) {
             if debugResetControlEnabled {
                 Button {
+                    showingSeedConfirmation = true
+                } label: {
+                    Image(systemName: "leaf.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 32, height: 32)
+                        .background(Circle().fill(Color.green.opacity(0.85)))
+                        .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 80)
+                .padding(.bottom, 90)
+                
+                Button {
                     showingResetConfirmation = true
                 } label: {
                     Image(systemName: "ladybug.fill")
@@ -107,7 +122,7 @@ struct AIChatView: View {
                         .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
                 }
                 .buttonStyle(.plain)
-                .padding(.trailing, 16)
+                .padding(.trailing, 1)
                 .padding(.bottom, 90)
             }
         }
@@ -116,6 +131,12 @@ struct AIChatView: View {
             Button("Reset", role: .destructive) { resetAppForTesting() }
         } message: {
             Text("This wipes all transactions, chats, and onboarding data, and restarts onboarding. Testing only.")
+        }
+        .alert("Seed Dummy Transactions?", isPresented: $showingSeedConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Seed") { seedDummyTransactionsForTesting() }
+        } message: {
+            Text("Adds 16 sample transactions (income + expenses across the last 30 days) for testing AIBuddy's math. Testing only.")
         }
         #endif
         .sheet(isPresented: $showingHistory) {
@@ -143,6 +164,44 @@ struct AIChatView: View {
         UserProfile.resetAll()
 
         appContainer.isUserOnboarded = false
+    }
+    
+    /// Adds a fixed set of sample transactions spanning the last 30 days — enough to
+    /// clear CashReserveCalculator's confidence gate and produce a believable average
+    /// daily spend, for testing AIBuddy's purchase-impact math without manual entry.
+    private func seedDummyTransactionsForTesting() {
+        let samples: [(daysAgo: Int, title: String, category: TransactionCategory, amount: Double)] = [
+            (28, "Client payment — Website project", .income, 8_000_000),
+            (25, "Groceries", .food, 350_000),
+            (23, "Electricity bill", .household, 450_000),
+            (21, "Coffee shop (work)", .food, 75_000),
+            (19, "Netflix + Spotify", .entertaiment, 200_000),
+            (18, "Client payment — Logo design", .income, 3_000_000),
+            (15, "Groceries", .food, 400_000),
+            (13, "Internet bill", .household, 350_000),
+            (11, "Dinner out", .food, 250_000),
+            (9, "Phone credit", .other, 100_000),
+            (7, "Groceries", .food, 380_000),
+            (6, "Movie night", .entertaiment, 150_000),
+            (4, "Client payment — Retainer", .income, 5_000_000),
+            (3, "Household supplies", .household, 220_000),
+            (2, "Coffee shop (work)", .food, 80_000),
+            (1, "Groceries", .food, 300_000)
+        ]
+
+        for sample in samples {
+            let date = Calendar.current.date(byAdding: .day, value: -sample.daysAgo, to: Date()) ?? Date()
+            let transaction = Transaction(
+                title: sample.title,
+                amount: sample.amount,
+                date: date,
+                category: sample.category,
+                source: .manual
+            )
+            modelContext.insert(transaction)
+        }
+
+        try? modelContext.save()
     }
     #endif
 

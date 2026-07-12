@@ -67,6 +67,7 @@ struct ScanReceiptTextIntent: AppIntent {
                     amount: parsed.amount ?? 0,
                     date: parsed.date ?? Date(),
                     category: parsed.category,
+                    isIncome: parsed.isIncome,
                     rawKeyword: parsed.keyword
                 )
             ))

@@ -21,6 +21,15 @@
 //  two-step reveal. ShareConfirmationView's Menu is unaffected — that one runs as an
 //  ordinary hosted SwiftUI view in the Share Extension's own process, not a snippet.
 //
+//  Updated 10/07/26 — snippets can't do @State-driven "pick then separately confirm"
+//  (see note above — no live editing here), so "preselected but changeable" instead
+//  means: the RegexParser-suggested category/Income button is visually highlighted,
+//  but every button — including non-suggested ones — remains its own tappable,
+//  immediately-final choice, same as before.
+//
+//  Updated 10/07/26 — every category/Income button now has an explicit
+//  minHeight: 44 / minWidth: 44, per Apple HIG's minimum hit-target size.
+//
 
 import AppIntents
 import SwiftUI
@@ -28,7 +37,7 @@ import SwiftUI
 struct ReceiptConfirmationSnippetView: View {
     enum State {
         case error(String)
-        case confirming(title: String, amount: Double, date: Date, category: TransactionCategory, rawKeyword: String?)
+        case confirming(title: String, amount: Double, date: Date, category: TransactionCategory, isIncome: Bool, rawKeyword: String?)
     }
 
     let state: State
@@ -39,7 +48,7 @@ struct ReceiptConfirmationSnippetView: View {
             Text(message)
                 .padding()
 
-        case .confirming(let title, let amount, let date, let category, let rawKeyword):
+        case .confirming(let title, let amount, let date, let category, let isIncome, let rawKeyword):
             VStack(alignment: .leading, spacing: 12) {
                 Text(title)
                     .font(.headline)
@@ -49,7 +58,7 @@ struct ReceiptConfirmationSnippetView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                if category != .income {
+                if !isIncome {
                     Text("Suggested category: \(category.rawValue)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -61,6 +70,7 @@ struct ReceiptConfirmationSnippetView: View {
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                     ForEach(TransactionCategory.allCases.filter { $0 != .income }, id: \.self) { expenseCategory in
+                        let isSuggested = !isIncome && expenseCategory == category
                         Button(intent: ConfirmReceiptAsExpenseIntent(
                             amount: amount,
                             date: date,
@@ -69,8 +79,10 @@ struct ReceiptConfirmationSnippetView: View {
                             rawKeyword: rawKeyword
                         )) {
                             Label(expenseCategory.rawValue, systemImage: expenseCategory.iconSystemName)
-                                .frame(maxWidth: .infinity)
+                                .frame(maxWidth: .infinity, minHeight: 44)
                         }
+                        .buttonStyle(.bordered)
+                        .tint(isSuggested ? .accentColor : .secondary)
                     }
                 }
 
@@ -81,8 +93,10 @@ struct ReceiptConfirmationSnippetView: View {
                     rawKeyword: rawKeyword
                 )) {
                     Text("Income")
-                        .frame(maxWidth: .infinity)
+                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
+                .buttonStyle(.bordered)
+                .tint(isIncome ? .accentColor : .secondary)
             }
             .padding()
         }
