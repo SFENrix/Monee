@@ -83,11 +83,12 @@ class AIChatViewModel: ObservableObject {
         messages.append(userMessage)
 
         do {
-            let transactionContext = try buildFinancialContext(using: modelContext)
+            let context = try buildFinancialContext(using: modelContext)
 
             let response = try await aiAdapter.generateAdvice(
-                systemContext: transactionContext,
-                userPrompt: trimmed
+                systemContext: context.text,
+                userPrompt: trimmed,
+                currentSummary: context.summary
             )
 
             let assistantMessage = ChatMessage(sessionID: session.id, role: .assistant, content: response)
@@ -121,7 +122,7 @@ class AIChatViewModel: ObservableObject {
     /// number is ever mixed into this arithmetic; (2) the user's emergency fund
     /// status, always shown but always labeled as self-managed/qualitative,
     /// never treated as a second use of the number already subtracted in (1).
-    private func buildFinancialContext(using context: ModelContext) throws -> String {
+    private func buildFinancialContext(using context: ModelContext) throws -> (text: String, summary: CashReserveSummary) {
         let descriptor = FetchDescriptor<Transaction>(sortBy: [SortDescriptor(\.date, order: .reverse)])
         let all = try context.fetch(descriptor)
 
@@ -168,7 +169,7 @@ class AIChatViewModel: ObservableObject {
             sections.append("INCOME: No income data available — no transactions logged and no estimate provided. Do not assume any income figure; ask the user directly if you need one.")
         }
 
-        return sections.joined(separator: "\n\n")
+        return (text: sections.joined(separator: "\n\n"), summary: summary)
     }
 
     /// The AI is only allowed to state a Spare Money/runway figure or a spending
