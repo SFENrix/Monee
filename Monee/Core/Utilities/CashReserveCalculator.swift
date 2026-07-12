@@ -19,6 +19,7 @@
 //
 
 import Foundation
+import FoundationModels
 
 struct CashReserveSummary {
     let spareMoney: Double           // startingBalance + tracked income - tracked expenses - emergency fund total
@@ -31,6 +32,20 @@ struct CashReserveSummary {
     /// or more transactions (of any kind). Below this, the AI should not state a Spare Money
     /// figure, runway, or spending verdict — just encourage logging more.
     let hasEnoughData: Bool
+}
+
+@Generable
+enum PurchaseTier: String {
+    case safe
+    case caution
+    case bad
+}
+
+@Generable
+struct PurchaseImpact {
+    var tier: PurchaseTier
+    var postPurchaseSpareMoney: Double
+    var postPurchaseRunwayDays: Double? = nil
 }
 
 enum CashReserveCalculator {
@@ -68,5 +83,26 @@ enum CashReserveCalculator {
             transactionCount: transactions.count,
             hasEnoughData: transactions.count >= minimumTransactionsForConfidence
         )
+    }
+    static func evaluatePurchase(amount: Double, currentSummary: CashReserveSummary) -> PurchaseImpact {
+        let postPurchaseSpareMoney = currentSummary.spareMoney - amount
+        let postPurchaseRunwayDays: Double? = currentSummary.avgDailyExpense > 0
+            ? postPurchaseSpareMoney / currentSummary.avgDailyExpense
+            : nil
+        
+        let tier: PurchaseTier
+        if postPurchaseSpareMoney <= 0 {
+            tier = .bad
+        } else if let runway = postPurchaseRunwayDays, runway < 14 {
+            tier = .caution
+        } else {
+            tier = .safe
+        }
+        
+        return PurchaseImpact(
+            tier: tier,
+            postPurchaseSpareMoney: postPurchaseSpareMoney,
+            postPurchaseRunwayDays: postPurchaseRunwayDays
+            )
     }
 }
