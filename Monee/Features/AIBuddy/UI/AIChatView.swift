@@ -174,14 +174,15 @@ struct AIChatView: View {
                 .frame(width: 190, height: 190)
             
             VStack(spacing: 8) {
-                Text("Hi \(userFirstName)!")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                Text("Ask me about a purchase!")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(Color(red: 0.16, green: 0.35, blue: 0.34))
 
-                Text("Thinking about buying something?")
-                    .font(.system(size: 17))
+                Text("Understanding your financial situation can give you clarity and make your purchase more fulfilling.")
+                    .font(.system(size: 14))
                     .foregroundStyle(Color(red: 0.18, green: 0.14, blue: 0.22))
             }
+            .multilineTextAlignment(.center)
             .padding(.top, 8)
 
             Spacer()
