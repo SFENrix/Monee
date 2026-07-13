@@ -81,12 +81,12 @@ struct OnboardingSetupView: View {
                         .focused($nameFieldFocused)
                 }
                 
-                Text("GANTI DISINI YAAAA")
-                    .font(.system(size: 11))
-                    .frame(maxWidth: .infinity,minHeight: 1, alignment: .leading)
-                    .padding(.horizontal, 18)
-                    .padding(.bottom,10 )
-                    .foregroundStyle(.secondary)
+//                Text("GANTI DISINI YAAAA")
+//                    .font(.system(size: 11))
+//                    .frame(maxWidth: .infinity,minHeight: 1, alignment: .leading)
+//                    .padding(.horizontal, 18)
+//                    .padding(.bottom,10 )
+//                    .foregroundStyle(.secondary)
 
 //                Button {
 //                    withAnimation(.easeInOut(duration: 0.2)) {
