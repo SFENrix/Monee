@@ -94,7 +94,7 @@ struct QuickEntryFormView: View {
 
             statementRow
 
-            if !viewModel.isIncome {
+            if viewModel.isIncome == false {
                 Divider().padding(.leading, 20)
                 categoriesSection
             }
@@ -119,11 +119,11 @@ struct QuickEntryFormView: View {
         .task {
             if let editing {
                 viewModel.load(from: editing)
-            } else {
-                viewModel.isIncome = true
             }
+            // Else: leave isIncome nil — the user must explicitly pick Income or
+            // Expense before Done becomes enabled (see QuickEntryViewModel.canSave).
         }
-        .presentationDetents([.height(viewModel.isIncome ? 340 : 540)])
+        .presentationDetents([.height(viewModel.isIncome == false ? 540 : 340)])
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(32)
         .presentationBackground(.clear)
@@ -221,16 +221,20 @@ struct QuickEntryFormView: View {
 
             statementButton(
                 title: "Income",
-                systemImage: "square.and.arrow.down",
-                isSelected: viewModel.isIncome
+                systemImage: "arrow.down",
+                tint: incomeGreen,
+                tintBackground: incomeGreenBackground,
+                isSelected: viewModel.isIncome == true
             ) {
                 viewModel.isIncome = true
             }
 
             statementButton(
                 title: "Expense",
-                systemImage: "square.and.arrow.up",
-                isSelected: !viewModel.isIncome
+                systemImage: "arrow.up",
+                tint: expenseRed,
+                tintBackground: expenseRedBackground,
+                isSelected: viewModel.isIncome == false
             ) {
                 viewModel.isIncome = false
             }
@@ -241,20 +245,35 @@ struct QuickEntryFormView: View {
         .padding(.vertical, 14)
     }
 
+    // Distinct green/red (not the shared accentTeal) so Income/Expense read as
+    // unambiguous directional arrows rather than generic share/save icons.
+    private var incomeGreen: Color { Color(red: 0.20, green: 0.60, blue: 0.35) }
+    private var incomeGreenBackground: Color { Color(red: 0.90, green: 0.98, blue: 0.93) }
+    private var expenseRed: Color { Color(red: 0.85, green: 0.25, blue: 0.25) }
+    private var expenseRedBackground: Color { Color(red: 1.0, green: 0.94, blue: 0.94) }
+
     private func statementButton(
         title: String,
         systemImage: String,
+        tint: Color,
+        tintBackground: Color,
         isSelected: Bool,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            VStack(spacing: 4) {
+            VStack(spacing: 6) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 18))
+                    .font(.system(size: 18, weight: .medium))
                 Text(title)
-                    .font(.system(size: 13))
+                    .font(.system(size: 13, weight: .medium))
             }
-            .foregroundStyle(isSelected ? accentTeal : .secondary)
+            .foregroundStyle(isSelected ? tint : .secondary)
+            .frame(minWidth: 96)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(isSelected ? tintBackground : Color(red: 0.96, green: 0.96, blue: 0.97))
+            )
         }
         .buttonStyle(.plain)
     }

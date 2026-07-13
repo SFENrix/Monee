@@ -148,6 +148,7 @@ struct AIChatView: View {
         .task {
             viewModel.bootstrap(modelContext: modelContext)
         }
+        
     }
 
     #if DEBUG

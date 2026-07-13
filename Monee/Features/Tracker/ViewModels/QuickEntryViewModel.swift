@@ -20,10 +20,15 @@ final class QuickEntryViewModel: ObservableObject {
     @Published var date: Date = .now
     @Published var validationError: String?
 
-    /// Drives the Income/Expense segmented control. Setting this reassigns `category`
-    /// so the two can never disagree — no separate "type" field needed.
-    @Published var isIncome: Bool = false {
-        didSet { category = isIncome ? .income : .other }
+    /// Drives the Income/Expense segmented control. `nil` means the user hasn't chosen
+    /// yet — required before `canSave` allows Done, so a transaction can never be saved
+    /// without an explicit Income/Expense pick. Setting this to a real value reassigns
+    /// `category` so the two can never disagree — no separate "type" field needed.
+    @Published var isIncome: Bool? = nil {
+        didSet {
+            guard let isIncome else { return }
+            category = isIncome ? .income : .other
+        }
     }
 
     /// Defaults to manual entry; ReceiptConfirmationView sets this to `.ocr` after prefilling.
@@ -38,7 +43,7 @@ final class QuickEntryViewModel: ObservableObject {
     /// amount, date, income/expense, and category — so title can't be a
     /// requirement here. `save()` derives one automatically when it's empty.
     var canSave: Bool {
-        (amount ?? 0) > 0
+        (amount ?? 0) > 0 && isIncome != nil
     }
 
     /// Loads an existing Transaction's fields for editing.
@@ -61,6 +66,11 @@ final class QuickEntryViewModel: ObservableObject {
     func save(using modelContext: ModelContext) -> Bool {
         guard let amount, amount > 0 else {
             validationError = "Enter an amount greater than zero."
+            return false
+        }
+
+        guard let isIncome else {
+            validationError = "Select Income or Expense."
             return false
         }
 
@@ -110,7 +120,7 @@ final class QuickEntryViewModel: ObservableObject {
         validationError = nil
         source = .manual
         rawKeyword = nil
-        isIncome = false
+        isIncome = nil
         editingTransaction = nil
     }
 }

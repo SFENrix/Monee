@@ -245,16 +245,13 @@ struct DashboardView: View {
     /// (`averagePerDay`). If you want the average itself to actually be a
     /// rolling 3-month figure, that's a separate change to that calculation.
     private var averageInfoBubble: some View {
-        (
-            Text("Based on your average spending over the last ")
-                + Text("3 months").fontWeight(.bold)
-        )
-        .font(.system(size: 15))
-        .foregroundStyle(.primary)
-        .multilineTextAlignment(.center)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .frame(maxWidth: 280)
+        Text("Based on your average spending over the last \(Text("3 months").fontWeight(.bold))")
+            .font(.system(size: 15))
+            .foregroundStyle(.primary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .frame(maxWidth: 280)
     }
 
     // MARK: - Data

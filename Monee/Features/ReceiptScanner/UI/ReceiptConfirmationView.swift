@@ -217,7 +217,7 @@ private struct ConfirmationForm: View {
                 DatePicker("Date", selection: $viewModel.date, displayedComponents: .date)
             }
 
-            if !viewModel.isIncome {
+            if viewModel.isIncome == false {
                 Section("Category") {
                     Picker("Category", selection: $viewModel.category) {
                         ForEach(TransactionCategory.allCases.filter { $0 != .income }, id: \.self) { cat in

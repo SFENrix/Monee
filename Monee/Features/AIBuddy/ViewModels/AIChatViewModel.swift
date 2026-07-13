@@ -29,8 +29,14 @@ class AIChatViewModel: ObservableObject {
         currentSession?.title ?? "New Chat"
     }
 
-    init(aiAdapter: AIAdapterProtocol = AppleIntelligenceAdapter()) {
-        self.aiAdapter = aiAdapter
+    @MainActor
+    init(aiAdapter: AIAdapterProtocol? = nil) {
+        if let aiAdapter {
+            self.aiAdapter = aiAdapter
+        } else {
+            // Construct the default adapter on the main actor to avoid isolation warnings.
+            self.aiAdapter = AppleIntelligenceAdapter()
+        }
     }
 
     /// Runs once when AIChatView appears. Surfaces an availability warning up front
