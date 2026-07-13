@@ -174,11 +174,11 @@ struct AIChatView: View {
                 .frame(width: 190, height: 190)
             
             VStack(spacing: 8) {
-                Text("Ask me about a purchase!")
+                Text("Ask buntel anything!")
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(Color(red: 0.16, green: 0.35, blue: 0.34))
 
-                Text("Understanding your financial situation can give you clarity and make your purchase more fulfilling.")
+                Text("Make purchases with confidence")
                     .font(.system(size: 14))
                     .foregroundStyle(Color(red: 0.18, green: 0.14, blue: 0.22))
             }

@@ -82,14 +82,14 @@ struct OnboardingFinancialSetupView: View {
     private var sheetContent: some View {
         VStack(spacing: 28) {
             VStack(spacing: 6) {
-                Text("How are you financially?")
+                Text("Tell us a bit about your finances")
                     .font(.system(size: 20, weight: .bold))
                     .multilineTextAlignment(.center)
 
-                Text("This will help me calculate your average transactions")
-                    .font(.system(size: 15))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+//                Text("This will help me calculate your average transactions")
+//                    .font(.system(size: 15))
+//                    .foregroundStyle(.secondary)
+//                    .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
 
@@ -100,11 +100,11 @@ struct OnboardingFinancialSetupView: View {
                         .font(.system(size: 16))
                         .focused($focusedField, equals: .totalMoney)
                 }
-                Text("GANTI DISINI YAAAA")
+                Text("We'll use this as your financial starting point to provide more accurate insights and recommendations.")
                     .font(.system(size: 11))
                     .frame(maxWidth: .infinity,minHeight: 1, alignment: .leading)
                     .padding(.horizontal, 18)
-                    .padding(.bottom,10 )
+                    .padding(.bottom )
                     .foregroundStyle(.secondary)
 
                 fieldCard(label: "Estimated Monthly income") {
@@ -113,11 +113,12 @@ struct OnboardingFinancialSetupView: View {
                         .font(.system(size: 16))
                         .focused($focusedField, equals: .monthlyIncome)
                 }
-                Text("GANTI DISINI YAAAA")
+                
+                Text("We’ll use this to help provide more accurate and personalized recommendations")
                     .font(.system(size: 11))
                     .frame(maxWidth: .infinity,minHeight: 1, alignment: .leading)
                     .padding(.horizontal, 18)
-                    .padding(.bottom,10 )
+                    .padding(.bottom)
                     .foregroundStyle(.secondary)
 
                 fieldCard(label: "Estimated Monthly expense") {
@@ -126,11 +127,11 @@ struct OnboardingFinancialSetupView: View {
                         .font(.system(size: 16))
                         .focused($focusedField, equals: .monthlyExpense)
                 }
-                Text("GANTI DISINI YAAAA")
+                Text("We'll use this to estimate your emergency savings target and personalize our recommendations")
                     .font(.system(size: 11))
                     .frame(maxWidth: .infinity,minHeight: 1, alignment: .leading)
                     .padding(.horizontal, 18)
-                    .padding(.bottom,10 )
+//                    .padding(.bottom,10 )
                     .foregroundStyle(.secondary)
             }
 
