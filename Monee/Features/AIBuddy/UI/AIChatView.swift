@@ -136,7 +136,7 @@ struct AIChatView: View {
             Button("Cancel", role: .cancel) {}
             Button("Seed") { seedDummyTransactionsForTesting() }
         } message: {
-            Text("Adds 16 sample transactions (income + expenses across the last 30 days) for testing AIBuddy's math. Testing only.")
+            Text("Adds \(DummyTransactionSeeder.transactionCount) sample transactions (income + expenses across the last 3 months) for testing AIBuddy's math. Testing only.")
         }
         #endif
         .sheet(isPresented: $showingHistory) {
@@ -167,42 +167,8 @@ struct AIChatView: View {
         appContainer.isUserOnboarded = false
     }
     
-    /// Adds a fixed set of sample transactions spanning the last 30 days — enough to
-    /// clear CashReserveCalculator's confidence gate and produce a believable average
-    /// daily spend, for testing AIBuddy's purchase-impact math without manual entry.
     private func seedDummyTransactionsForTesting() {
-        let samples: [(daysAgo: Int, title: String, category: TransactionCategory, amount: Double)] = [
-            (28, "Client payment — Website project", .income, 8_000_000),
-            (25, "Groceries", .food, 350_000),
-            (23, "Electricity bill", .household, 450_000),
-            (21, "Coffee shop (work)", .food, 75_000),
-            (19, "Netflix + Spotify", .entertaiment, 200_000),
-            (18, "Client payment — Logo design", .income, 3_000_000),
-            (15, "Groceries", .food, 400_000),
-            (13, "Internet bill", .household, 350_000),
-            (11, "Dinner out", .food, 250_000),
-            (9, "Phone credit", .other, 100_000),
-            (7, "Groceries", .food, 380_000),
-            (6, "Movie night", .entertaiment, 150_000),
-            (4, "Client payment — Retainer", .income, 5_000_000),
-            (3, "Household supplies", .household, 220_000),
-            (2, "Coffee shop (work)", .food, 80_000),
-            (1, "Groceries", .food, 300_000)
-        ]
-
-        for sample in samples {
-            let date = Calendar.current.date(byAdding: .day, value: -sample.daysAgo, to: Date()) ?? Date()
-            let transaction = Transaction(
-                title: sample.title,
-                amount: sample.amount,
-                date: date,
-                category: sample.category,
-                source: .manual
-            )
-            modelContext.insert(transaction)
-        }
-
-        try? modelContext.save()
+        DummyTransactionSeeder.seed(into: modelContext)
     }
     #endif
 

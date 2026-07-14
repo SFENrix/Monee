@@ -66,21 +66,28 @@ struct AppleIntelligenceAdapter: AIAdapterProtocol {
                         never redo the arithmetic yourself. If it says there isn't enough data yet, do NOT invent
                         or estimate a Spare Money figure, runway, or spending verdict — just tell the user plainly
                         to log more transactions first.
-                
-                        Once it gives ymentions a specific purchase amountand asks
-                        whether it's okePurchaseImpact tool with thatamount before
-                        responding — neuess the impact yourself. The toolreturns the
-                        real post-purch caution, or bad. State that tierplainly and
-                        back it with thin your own coaching voice — do notrecompute
-                        or second-guess
-                
-                        YOU WILL ALSO Bck — self-managed by the user,already
-                        subtracted out purely as qualitative status. Bringit up
-                        only when it's  user is asking — a spendingdecision, a
-                        savings questio financial standing — not as ascheduled or
-                        every-response  and the fund isn't yet at 100%, you can
-                        encourage them rget to add to your emergency fund — once
-                        it fills up youallocate!" but don't force this into
+
+                        Once the user mentions a specific purchase amount and asks whether it's okay to buy,
+                        call the evaluatePurchaseImpact tool with that amount before responding — never guess
+                        the impact yourself. The tool returns the real post-purchase tier (safe, caution, or bad)
+                        along with two already Rupiah-formatted strings: purchaseAmountFormatted (e.g.
+                        "Rp17.000.000") for restating what the user wants to buy, and
+                        postPurchaseSpareMoneyFormatted (e.g. "Rp1.190.000") for the remaining Spare Money.
+                        Copy both strings into your response character-for-character — never retype, reformat,
+                        or add/remove digits from either one, and never state the raw postPurchaseSpareMoney
+                        number or your own transcription of the purchase amount instead. You are unreliable at
+                        inserting thousands-separators correctly and past attempts have silently multiplied
+                        figures by 10 or 100, or used commas instead of dots. State the tier plainly and back
+                        it up within your own coaching voice — do not recompute or second-guess the tool's
+                        result.
+
+                        YOU WILL ALSO BE GIVEN an EMERGENCY FUND block — self-managed by the user, already
+                        subtracted out of Spare Money, given to you purely as qualitative status. Bring it up
+                        only when it's actually relevant to what the user is asking — a spending decision, a
+                        savings question, or them asking about their financial standing — not as a scheduled or
+                        every-response reminder. When it IS relevant and the fund isn't yet at 100%, you can
+                        encourage them with something like "Don't forget to add to your emergency fund — once
+                        it fills up you'll have more spare money to allocate!" but don't force this into
                         unrelated answers (e.g. a question purely about which category they spent most on this
                         month doesn't need an emergency fund mention).
                 
@@ -88,7 +95,7 @@ struct AppleIntelligenceAdapter: AIAdapterProtocol {
                         use these to explain patterns, not to recalculate totals.
                 """
         
-        // New session per call, on purndently grounded by
+        // New session per call, on purpose, independently grounded by
         // the injected transaction context rather than relying on model-side memory.
         let session = LanguageModelSession(
             tools: [PurchaseImpactTool(currentSummary: currentSummary)],
@@ -126,18 +133,30 @@ struct AppleIntelligenceAdapter: AIAdapterProtocol {
     /// returns a fixed clarifying question rather than trusting an ungrounded answer.
     private func respondCheckingToolUse(session: LanguageModelSession, prompt: String) async throws -> String {
         let response = try await session.respond(to: prompt)
-        
+
+        #if DEBUG
+        let entries = Array(session.transcript)
+        print("[AIAdapter] first pass — mentionsAmount: \(promptMentionsAnAmount(prompt)), toolCalled: \(session.transcript.containsPurchaseToolCall), transcript entries: \(entries.count)")
+        for entry in entries {
+            print("[AIAdapter]   entry: \(entry)")
+        }
+        #endif
+
         guard promptMentionsAnAmount(prompt), !session.transcript.containsPurchaseToolCall else {
             return response.content
         }
-        
+
         let nudgedPrompt = prompt + "\n\n(Reminder: you must call evaluatePurchaseImpact before answering this.)"
         let retryResponse = try await session.respond(to: nudgedPrompt)
-        
+
+        #if DEBUG
+        print("[AIAdapter] retry pass — toolCalled: \(session.transcript.containsPurchaseToolCall), transcript entries: \(Array(session.transcript).count)")
+        #endif
+
         if session.transcript.containsPurchaseToolCall {
             return retryResponse.content
         }
-        
+
         return "I want to give you a real answer on that — can you tell me the exact amount, like \"Rp1.000.000\"?"
     }
     

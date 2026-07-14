@@ -24,11 +24,20 @@ struct PurchaseImpactTool: Tool {
 
     @Generable
     struct Arguments {
-        @Guide(description: "The purchase amount mentioned by the user, in Indonesian Rupiah, as a plain number with no currency symbol or thousands separators")
+        @Guide(description: """
+        The purchase amount mentioned by the user, converted to a plain Indonesian Rupiah \
+        number with no currency symbol, no thousands separators, and no abbreviation. \
+        Examples of user phrasing and the value to produce: "17 million" -> 17000000, \
+        "17 juta" or "17jt" -> 17000000, "Rp17.000.000" -> 17000000, "500 thousand" or \
+        "500rb" -> 500000.
+        """)
         var amount: Double
     }
 
     func call(arguments: Arguments) async throws -> PurchaseImpact {
-        await CashReserveCalculator.evaluatePurchase(amount: arguments.amount, currentSummary: currentSummary)
-        }
+        #if DEBUG
+        print("[PurchaseImpactTool] received amount: \(arguments.amount)")
+        #endif
+        return await CashReserveCalculator.evaluatePurchase(amount: arguments.amount, currentSummary: currentSummary)
     }
+}

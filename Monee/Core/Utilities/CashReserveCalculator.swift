@@ -44,8 +44,20 @@ enum PurchaseTier: String {
 @Generable
 struct PurchaseImpact {
     var tier: PurchaseTier
+    /// Raw value kept for internal Swift-side use (e.g. debug logging) — never handed
+    /// to the model as a number to reformat itself. On-device models are unreliable at
+    /// inserting Rupiah thousands-separators into a raw digit sequence (observed: 1,190,000
+    /// getting rewritten as "119.000.000"), so `postPurchaseSpareMoneyFormatted` below is
+    /// the only spare-money figure the coaching rules allow the model to state, verbatim.
     var postPurchaseSpareMoney: Double
     var postPurchaseRunwayDays: Double? = nil
+    /// Already formatted as Rupiah (e.g. "Rp1.190.000") — the model should copy this
+    /// string exactly rather than reformatting `postPurchaseSpareMoney` itself.
+    var postPurchaseSpareMoneyFormatted: String
+    /// The purchase amount the model was asked about, echoed back already formatted
+    /// (e.g. "Rp17.000.000") — this leaves the model with no raw number left to
+    /// reformat itself when it restates what was purchased.
+    var purchaseAmountFormatted: String
 }
 
 enum CashReserveCalculator {
@@ -102,7 +114,9 @@ enum CashReserveCalculator {
         return PurchaseImpact(
             tier: tier,
             postPurchaseSpareMoney: postPurchaseSpareMoney,
-            postPurchaseRunwayDays: postPurchaseRunwayDays
+            postPurchaseRunwayDays: postPurchaseRunwayDays,
+            postPurchaseSpareMoneyFormatted: postPurchaseSpareMoney.idrFormatted,
+            purchaseAmountFormatted: amount.idrFormatted
             )
     }
 }

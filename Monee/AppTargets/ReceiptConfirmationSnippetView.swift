@@ -49,28 +49,29 @@ struct ReceiptConfirmationSnippetView: View {
                 .padding()
 
         case .confirming(let title, let amount, let date, let category, let isIncome, let rawKeyword):
-            VStack(alignment: .leading, spacing: 12) {
-                Text(title)
-                    .font(.headline)
-                Text(amount.idrFormatted)
-                    .font(.title2.bold())
-                Text(date.formatted(date: .abbreviated, time: .omitted))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                if !isIncome {
-                    Text("Suggested category: \(category.rawValue)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                    Spacer(minLength: 8)
+                    Text(amount.idrFormatted)
+                        .font(.subheadline.bold())
                 }
-
-                Text("Expense")
-                    .font(.subheadline.weight(.semibold))
+                Text(date.formatted(date: .abbreviated, time: .omitted))
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                Text(isIncome || category != .other
+                     ? "Suggested: \(isIncome ? "Income" : category.rawValue) — tap a button below to log it"
+                     : "Tap a button below to log it")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 2)
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 4) {
                     ForEach(TransactionCategory.allCases.filter { $0 != .income }, id: \.self) { expenseCategory in
-                        let isSuggested = !isIncome && expenseCategory == category
+                        let isSuggested = !isIncome && expenseCategory == category && category != .other
                         Button(intent: ConfirmReceiptAsExpenseIntent(
                             amount: amount,
                             date: date,
@@ -78,7 +79,8 @@ struct ReceiptConfirmationSnippetView: View {
                             categoryRawValue: expenseCategory.rawValue,
                             rawKeyword: rawKeyword
                         )) {
-                            Label(expenseCategory.rawValue, systemImage: expenseCategory.iconSystemName)
+                            Label(isSuggested ? "\(expenseCategory.rawValue)" : expenseCategory.rawValue, systemImage: expenseCategory.iconSystemName)
+                                .font(.footnote)
                                 .frame(maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.bordered)
@@ -92,13 +94,14 @@ struct ReceiptConfirmationSnippetView: View {
                     transactionTitle: title,
                     rawKeyword: rawKeyword
                 )) {
-                    Text("Income")
+                    Text(isIncome ? "Income (suggested)" : "Income")
+                        .font(.footnote)
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.bordered)
                 .tint(isIncome ? .accentColor : .secondary)
             }
-            .padding()
+            .padding(10)
         }
     }
 }
